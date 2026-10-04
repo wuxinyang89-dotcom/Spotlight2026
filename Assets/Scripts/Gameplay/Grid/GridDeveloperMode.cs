@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Spotlight.Gameplay.Grid
 {
@@ -21,11 +22,15 @@ namespace Spotlight.Gameplay.Grid
 
         private static readonly Rect PanelRect = new Rect(10f, 10f, 300f, 460f);
 
+        private const float DragThresholdPixels = 5f;
+
         private Grid2D _grid;
         private Brush _brush = Brush.Wall;
         private int _width;
         private int _height;
         private bool _showHelp = true;
+        private bool _paintPressed;
+        private Vector2 _paintStart;
 
         /// <summary>请求导出为 ScriptableObject 资产（由 Editor 层注册实现）。</summary>
         public static event Action<Grid2D> ExportToAssetRequested;
@@ -48,19 +53,36 @@ namespace Spotlight.Gameplay.Grid
 
         private void Update()
         {
-            if (_grid == null || IsPointerOverPanel())
+            if (_grid == null || Mouse.current == null)
             {
                 return;
             }
 
-            // 左键用当前画笔涂格子；右键擦除。
-            if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+            Mouse mouse = Mouse.current;
+
+            // 左键：按下记录起点，松开时位移未超过阈值则视为“点击”→ 涂格子。
+            if (mouse.leftButton.wasPressedThisFrame)
             {
-                Brush brush = Input.GetMouseButton(0) ? _brush : Brush.Erase;
-                if (TryGetCellAtMouse(out int x, out int y))
+                _paintPressed = true;
+                _paintStart = mouse.position.ReadValue();
+            }
+            else if (mouse.leftButton.wasReleasedThisFrame && _paintPressed)
+            {
+                _paintPressed = false;
+                if (Vector2.Distance(mouse.position.ReadValue(), _paintStart) <= DragThresholdPixels
+                    && !IsPointerOverPanel()
+                    && TryGetCellAtMouse(out int x, out int y))
                 {
-                    ApplyBrush(x, y, brush);
+                    ApplyBrush(x, y, _brush);
                 }
+            }
+
+            // 右键：点击擦除（右键不参与相机平移，直接点击即可）。
+            if (mouse.rightButton.wasPressedThisFrame
+                && !IsPointerOverPanel()
+                && TryGetCellAtMouse(out int rX, out int rY))
+            {
+                ApplyBrush(rX, rY, Brush.Erase);
             }
         }
 
@@ -113,8 +135,9 @@ namespace Spotlight.Gameplay.Grid
             _showHelp = GUILayout.Toggle(_showHelp, "显示帮助");
             if (_showHelp)
             {
-                GUILayout.Label("· 左键：用当前画笔涂格子");
-                GUILayout.Label("· 右键：擦除格子");
+                GUILayout.Label("· 左键点击：用当前画笔涂格子");
+                GUILayout.Label("· 右键点击：擦除格子");
+                GUILayout.Label("· 左键拖动：平移相机");
                 GUILayout.Label("· 人物格全局唯一，放新人物会替换旧位置");
                 GUILayout.Label("· 导出后可在 Project 窗口编辑该资产");
             }
@@ -153,12 +176,13 @@ namespace Spotlight.Gameplay.Grid
             y = -1;
 
             Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
-            if (cam == null)
+            if (cam == null || Mouse.current == null)
             {
                 return false;
             }
 
-            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+            Ray ray = cam.ScreenPointToRay(mousePosition);
             Plane plane = new Plane(Vector3.up, _grid.transform.position);
             if (!plane.Raycast(ray, out float dist))
             {
@@ -174,8 +198,13 @@ namespace Spotlight.Gameplay.Grid
 
         private bool IsPointerOverPanel()
         {
-            Vector3 mouse = Input.mousePosition;
-            // OnGUI 坐标系原点在左上、y 向下；Input.mousePosition 原点在左下、y 向上，需转换。
+            if (Mouse.current == null)
+            {
+                return false;
+            }
+
+            Vector2 mouse = Mouse.current.position.ReadValue();
+            // OnGUI 坐标系原点在左上、y 向下；InputSystem 的 position 原点在左下、y 向上，需转换。
             Vector2 guiPos = new Vector2(mouse.x, Screen.height - mouse.y);
             return PanelRect.Contains(guiPos);
         }

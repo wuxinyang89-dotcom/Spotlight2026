@@ -7,7 +7,7 @@ namespace Spotlight.Gameplay.Grid
     /// <summary>
     /// 2D 玩法网格：管理网格尺寸、格子数据与视觉方块，实现 <see cref="IGridOperation"/>。
     /// 纯运行时组件；配置可在运行模式下通过 <see cref="GridDeveloperMode"/> 完成。
-    /// 世界坐标约定：原点为网格左上角（本物体位置），X 向右、Z 向下，方块位于 XZ 平面。
+    /// 世界坐标约定：原点为网格左下角（本物体位置），X 向右、Y 向上，方块位于 XY 平面（Z=0）。
     /// </summary>
     public sealed class Grid2D : MonoBehaviour, IGridOperation
     {
@@ -48,7 +48,8 @@ namespace Spotlight.Gameplay.Grid
         /// <summary>把格子坐标转换为世界坐标。</summary>
         public Vector3 CellToWorld(int x, int y)
         {
-            return transform.position + new Vector3(x * cellSize, 0f, y * cellSize);
+            // 2D 世界空间：X 向右、Y 向上，所有瓦片位于 Z=0 平面。
+            return transform.position + new Vector3(x * cellSize, y * cellSize, 0f);
         }
 
         /// <summary>重建网格：清空所有方块并生成底板。</summary>
@@ -183,21 +184,42 @@ namespace Spotlight.Gameplay.Grid
             }
         }
 
+        private static Sprite _sharedSquareSprite;
+
+        /// <summary>1×1 白色方块精灵，用于程序化生成瓦片。</summary>
+        private static Sprite SharedSquareSprite
+        {
+            get
+            {
+                if (_sharedSquareSprite == null)
+                {
+                    _sharedSquareSprite = Sprite.Create(
+                        Texture2D.whiteTexture,
+                        new Rect(0f, 0f, 1f, 1f),
+                        new Vector2(0.5f, 0.5f),
+                        1f);
+                }
+
+                return _sharedSquareSprite;
+            }
+        }
+
         private GameObject CreateBlock(GridCell cell, GridCellType type)
         {
             GameObject prefab = GetPrefab(type);
-            GameObject block = prefab != null
-                ? Instantiate(prefab, cell.WorldPosition, Quaternion.identity, transform)
-                : CreatePrimitiveBlock(type);
+            GameObject block;
+
+            if (prefab != null)
+            {
+                block = Instantiate(prefab, cell.WorldPosition, Quaternion.identity, transform);
+            }
+            else
+            {
+                block = CreateSpriteBlock(cell.WorldPosition, GetColor(type), 1, cellSize * 0.9f);
+            }
 
             block.name = $"{type}_{cell.X}_{cell.Y}";
             block.transform.position = cell.WorldPosition;
-
-            if (prefab == null)
-            {
-                block.transform.localScale = Vector3.one * (cellSize * 0.9f);
-            }
-
             return block;
         }
 
@@ -212,10 +234,17 @@ namespace Spotlight.Gameplay.Grid
             }
         }
 
-        private static GameObject CreatePrimitiveBlock(GridCellType type)
+        private GameObject CreateSpriteBlock(Vector3 worldPosition, Color color, int sortingOrder, float size)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.GetComponent<Renderer>().sharedMaterial = CreateMaterial(GetColor(type));
+            GameObject go = new GameObject("Tile");
+            go.transform.SetParent(transform, false);
+            go.transform.position = worldPosition;
+            go.transform.localScale = new Vector3(size, size, 1f);
+
+            SpriteRenderer renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = SharedSquareSprite;
+            renderer.color = color;
+            renderer.sortingOrder = sortingOrder;
             return go;
         }
 
@@ -230,25 +259,6 @@ namespace Spotlight.Gameplay.Grid
             }
         }
 
-        private static Material CreateMaterial(Color color)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit")
-                            ?? Shader.Find("Standard")
-                            ?? Shader.Find("Unlit/Color");
-
-            Material mat = new Material(shader);
-            if (mat.HasProperty("_BaseColor"))
-            {
-                mat.SetColor("_BaseColor", color);
-            }
-            else
-            {
-                mat.color = color;
-            }
-
-            return mat;
-        }
-
         private void CreateGround()
         {
             if (_ground != null)
@@ -256,18 +266,17 @@ namespace Spotlight.Gameplay.Grid
                 Destroy(_ground);
             }
 
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ground.name = "Ground";
-            ground.transform.SetParent(transform, false);
-            ground.transform.localScale = new Vector3(width * cellSize, 0.05f, height * cellSize);
-            ground.transform.localPosition = new Vector3(
-                (width - 1) * cellSize * 0.5f,
-                -0.05f,
-                (height - 1) * cellSize * 0.5f);
+            GameObject ground = CreateSpriteBlock(
+                transform.position + new Vector3(
+                    (width - 1) * cellSize * 0.5f,
+                    (height - 1) * cellSize * 0.5f,
+                    0f),
+                new Color(0.72f, 0.72f, 0.76f),
+                0,
+                1f);
 
-            ground.GetComponent<Renderer>().sharedMaterial =
-                CreateMaterial(new Color(0.72f, 0.72f, 0.76f));
-
+            ground.name = "Background";
+            ground.transform.localScale = new Vector3(width * cellSize, height * cellSize, 1f);
             _ground = ground;
         }
 
