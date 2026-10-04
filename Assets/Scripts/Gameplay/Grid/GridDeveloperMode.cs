@@ -183,7 +183,9 @@ namespace Spotlight.Gameplay.Grid
 
             Vector2 mousePosition = Mouse.current.position.ReadValue();
             Ray ray = cam.ScreenPointToRay(mousePosition);
-            Plane plane = new Plane(Vector3.up, _grid.transform.position);
+
+            // 2D 世界空间：瓦片位于 XY 平面（Z=0），故射线与 Z=0 平面求交。
+            Plane plane = new Plane(Vector3.back, _grid.transform.position);
             if (!plane.Raycast(ray, out float dist))
             {
                 return false;
@@ -191,8 +193,11 @@ namespace Spotlight.Gameplay.Grid
 
             Vector3 point = ray.GetPoint(dist);
             Vector3 local = _grid.transform.InverseTransformPoint(point);
-            x = Mathf.FloorToInt(local.x / _grid.CellSize);
-            y = Mathf.FloorToInt(local.z / _grid.CellSize);
+
+            // 瓦片中心位于整数倍 cellSize 处，故四舍五入到最近的格子中心；
+            // 若用 FloorToInt 会产生半格偏移（点击格子右/上半边会涂到相邻格）。
+            x = Mathf.FloorToInt(local.x / _grid.CellSize + 0.5f);
+            y = Mathf.FloorToInt(local.y / _grid.CellSize + 0.5f);
             return _grid.IsInBounds(x, y);
         }
 
