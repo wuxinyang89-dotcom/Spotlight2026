@@ -34,10 +34,24 @@ namespace Spotlight.Gameplay.EditorTools
             cam.tag = "MainCamera";
             GridCameraController camController = cameraGo.AddComponent<GridCameraController>();
 
-            // 2D 玩法对象（网格 + 开发者模式）
+            // 2D 玩法对象（网格 + 开发者模式 + 人物控制器 + 模式控制器）
             GameObject gameplay = new GameObject("2DGameplay");
             Grid2D grid = gameplay.AddComponent<Grid2D>();
-            gameplay.AddComponent<GridDeveloperMode>();
+            GridDeveloperMode devMode = gameplay.AddComponent<GridDeveloperMode>();
+            GridPlayerController player = gameplay.AddComponent<GridPlayerController>();
+            GridGameMode mode = gameplay.AddComponent<GridGameMode>();
+            LevelLoader levelLoader = gameplay.AddComponent<LevelLoader>();
+
+            // 模式控制器绑定开发者模式与人物控制器
+            SerializedObject modeSo = new SerializedObject(mode);
+            modeSo.FindProperty("developerMode").objectReferenceValue = devMode;
+            modeSo.FindProperty("playerController").objectReferenceValue = player;
+            modeSo.ApplyModifiedProperties();
+
+            // 关卡加载器绑定网格
+            SerializedObject loaderSo = new SerializedObject(levelLoader);
+            loaderSo.FindProperty("grid").objectReferenceValue = grid;
+            loaderSo.ApplyModifiedProperties();
 
             // 相机控制器绑定网格，用于自动计算平移边界
             SerializedObject so = new SerializedObject(camController);
@@ -63,6 +77,51 @@ namespace Spotlight.Gameplay.EditorTools
             go.AddComponent<GameplayBootstrap>();
             Undo.RegisterCreatedObjectUndo(go, "Add GameplayBootstrap");
             Debug.Log("[Spotlight] 已添加 GameplayBootstrap。");
+        }
+
+        [MenuItem("Tools/Spotlight/创建默认关卡（含示例布局）")]
+        public static void CreateDefaultLevel()
+        {
+            const string folder = "Assets/Levels";
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                AssetDatabase.CreateFolder("Assets", "Levels");
+            }
+
+            string layoutPath = folder + "/SampleLevelLayout.asset";
+            string levelPath = folder + "/SampleLevel.asset";
+
+            GridLayoutAsset layout = ScriptableObject.CreateInstance<GridLayoutAsset>();
+            layout.width = 8;
+            layout.height = 8;
+            layout.cellSize = 1f;
+            layout.SetCell(4, 4, GridCellType.Player);
+            layout.SetCell(2, 2, GridCellType.Wall);
+            layout.SetCell(5, 3, GridCellType.Wall);
+            layout.SetCell(3, 5, GridCellType.Wall);
+            layout.SetCell(6, 6, GridCellType.Interactable);
+            AssetDatabase.CreateAsset(layout, layoutPath);
+
+            LevelAsset level = ScriptableObject.CreateInstance<LevelAsset>();
+            level.levelName = "SampleLevel";
+            level.layout = layout;
+            AssetDatabase.CreateAsset(level, levelPath);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            // 尝试把默认关卡赋给场景中的 GameplayBootstrap
+            GameplayBootstrap bootstrap = Object.FindFirstObjectByType<GameplayBootstrap>();
+            if (bootstrap != null)
+            {
+                SerializedObject so = new SerializedObject(bootstrap);
+                so.FindProperty("defaultLevel").objectReferenceValue = level;
+                so.ApplyModifiedProperties();
+                EditorUtility.SetDirty(bootstrap);
+            }
+
+            Selection.activeObject = level;
+            Debug.Log($"[Spotlight] 默认关卡已创建：{levelPath}");
         }
 
         private static void EnsureBuildSettings()

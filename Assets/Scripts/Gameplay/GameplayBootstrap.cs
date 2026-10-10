@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Spotlight.Gameplay.Grid;
 using Spotlight.Gameplay.States;
 
 namespace Spotlight.Gameplay
@@ -15,11 +16,20 @@ namespace Spotlight.Gameplay
         [SerializeField] private string mode2DScene = "Gameplay2D";
         [SerializeField] private GameplayMode startMode = GameplayMode.Mode3D;
 
+        [Header("关卡")]
+        [SerializeField] private LevelAsset defaultLevel; // 每次运行默认加载的关卡
+
         [Header("调试切换（临时）")]
         [SerializeField] private Key debugToggleKey = Key.M;
 
         private static GameplayBootstrap _instance;
         private GameplayModeManager _manager;
+
+        /// <summary>全局单例（跨场景常驻）。</summary>
+        public static GameplayBootstrap Instance => _instance;
+
+        /// <summary>当前要加载的关卡（切到 2D 场景时由 LevelLoader 读取）。</summary>
+        public LevelAsset CurrentLevel { get; private set; }
 
         private void Awake()
         {
@@ -33,6 +43,8 @@ namespace Spotlight.Gameplay
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
+            CurrentLevel = defaultLevel; // 默认关卡：每次运行加载
+
             _manager = new GameplayModeManager();
             _manager.Register(new Gameplay3DState());
             _manager.Register(new Gameplay2DState());
@@ -41,7 +53,19 @@ namespace Spotlight.Gameplay
             _manager.SwitchTo(startMode);
         }
 
-        public void SwitchTo(GameplayMode mode) => _manager.SwitchTo(mode);
+        /// <summary>
+        /// 切换玩法场景，可同时指定要加载的关卡（2D 玩法用）。
+        /// 不指定 level 时沿用当前关卡（默认关卡）。
+        /// </summary>
+        public void SwitchTo(GameplayMode mode, LevelAsset level = null)
+        {
+            if (level != null)
+            {
+                CurrentLevel = level;
+            }
+
+            _manager.SwitchTo(mode);
+        }
 
         private void Update()
         {
@@ -53,7 +77,7 @@ namespace Spotlight.Gameplay
                 GameplayMode next = _manager.Current != null && _manager.Current.Mode == GameplayMode.Mode2D
                     ? GameplayMode.Mode3D
                     : GameplayMode.Mode2D;
-                _manager.SwitchTo(next);
+                SwitchTo(next);
             }
         }
 
