@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1118988356
+--- !u!1 &186885834
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,73 +127,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1118988359}
-  - component: {fileID: 1118988358}
-  - component: {fileID: 1118988357}
-  m_Layer: 0
-  m_Name: 2DGameplay
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1118988357
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1118988356}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37cf78eac8c2ccf4a985d3eefec90ba1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.GridDeveloperMode
---- !u!114 &1118988358
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1118988356}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 278efa990898c6741875cbb4da37f963, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.Grid2D
-  width: 8
-  height: 8
-  cellSize: 1
-  playerBlockPrefab: {fileID: 0}
-  wallBlockPrefab: {fileID: 0}
-  interactableBlockPrefab: {fileID: 0}
-  layoutAsset: {fileID: 0}
---- !u!4 &1118988359
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1118988356}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1381167726
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1381167729}
-  - component: {fileID: 1381167728}
-  - component: {fileID: 1381167727}
+  - component: {fileID: 186885837}
+  - component: {fileID: 186885836}
+  - component: {fileID: 186885835}
   m_Layer: 0
   m_Name: 2DCamera
   m_TagString: MainCamera
@@ -201,13 +137,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1381167727
+--- !u!114 &186885835
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1381167726}
+  m_GameObject: {fileID: 186885834}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 87b0ef0227fa0e94cace9606f56e37db, type: 3}
@@ -217,16 +153,16 @@ MonoBehaviour:
   minOrthographicSize: 2
   maxOrthographicSize: 50
   dragThresholdPixels: 5
-  grid: {fileID: 1118988358}
+  grid: {fileID: 436957471}
   boundsMin: {x: 0, y: 0}
   boundsMax: {x: 0, y: 0}
---- !u!20 &1381167728
+--- !u!20 &186885836
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1381167726}
+  m_GameObject: {fileID: 186885834}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -271,16 +207,128 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1381167729
+--- !u!4 &186885837
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1381167726}
+  m_GameObject: {fileID: 186885834}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &436957466
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 436957472}
+  - component: {fileID: 436957471}
+  - component: {fileID: 436957470}
+  - component: {fileID: 436957469}
+  - component: {fileID: 436957468}
+  - component: {fileID: 436957467}
+  m_Layer: 0
+  m_Name: 2DGameplay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &436957467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06db626ae6e8dd74285da176e9ac543e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.LevelLoader
+  grid: {fileID: 436957471}
+  fallbackLevel: {fileID: 0}
+--- !u!114 &436957468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fe61f5b37dd50c48b3c1655166dec16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.GridGameMode
+  startMode: 0
+  allowEditMode: 1
+  toggleKey: 3
+  developerMode: {fileID: 436957470}
+  playerController: {fileID: 436957469}
+--- !u!114 &436957469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a0a83a7027e1924586363b834d26812, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.GridPlayerController
+  grid: {fileID: 0}
+  moveInterval: 0.15
+--- !u!114 &436957470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37cf78eac8c2ccf4a985d3eefec90ba1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.GridDeveloperMode
+--- !u!114 &436957471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 278efa990898c6741875cbb4da37f963, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.Grid2D
+  width: 8
+  height: 8
+  cellSize: 1
+  playerBlockPrefab: {fileID: 0}
+  wallBlockPrefab: {fileID: 0}
+  interactableBlockPrefab: {fileID: 0}
+  layoutAsset: {fileID: 0}
+--- !u!4 &436957472
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 436957466}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -290,5 +338,5 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1381167729}
-  - {fileID: 1118988359}
+  - {fileID: 186885837}
+  - {fileID: 436957472}

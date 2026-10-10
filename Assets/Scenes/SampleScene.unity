@@ -464,6 +464,7 @@ MonoBehaviour:
   mode3DScene: SampleScene
   mode2DScene: Gameplay2D
   startMode: 0
+  defaultLevel: {fileID: 11400000, guid: 79f4b5e6a4a97644eba74681a8838bf8, type: 2}
   debugToggleKey: 27
 --- !u!4 &1161525135
 Transform:

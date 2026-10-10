@@ -5,13 +5,14 @@ using UnityEngine.InputSystem;
 namespace Spotlight.Gameplay.Grid
 {
     /// <summary>
-    /// 网格开发者模式：在运行模式下提供可视化面板，直接配置网格。
-    /// 支持：选择“画笔”类型（擦除 / 人物 / 墙 / 可交互）、左键涂格子 / 右键擦除、
-    /// 调整网格尺寸并重建、清空、以及导出 / 加载为 ScriptableObject 资产。
-    /// 用法：挂载到与 <see cref="Grid2D"/> 同一物体上，运行时即可点击涂格子。
+    /// 网格开发者模式（仅 Unity 编辑器可用，用 #if UNITY_EDITOR 从打包后剥离）。
+    /// 在编辑器运行模式下提供可视化面板，直接配置网格：选择画笔、点击涂格子、
+    /// 调整尺寸重建、清空、导出 / 加载为 ScriptableObject 资产。
+    /// 用法：挂载到与 <see cref="Grid2D"/> 同一物体上，编辑态下即可点击涂格子。
     /// </summary>
     public sealed class GridDeveloperMode : MonoBehaviour
     {
+#if UNITY_EDITOR
         private enum Brush
         {
             Erase,
@@ -214,5 +215,6 @@ namespace Spotlight.Gameplay.Grid
             return PanelRect.Contains(guiPos);
         }
 
+#endif
     }
 }
