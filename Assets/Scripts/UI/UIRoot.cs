@@ -44,6 +44,13 @@ namespace Spotlight.UI
             return _instance;
         }
 
+        /// <summary>场景加载后自动初始化 UI 根（创建 Canvas 与 EventSystem）。幂等，重复调用无害。</summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void AutoInitialize()
+        {
+            Ensure();
+        }
+
         private void Awake()
         {
             if (_instance != null && _instance != this)

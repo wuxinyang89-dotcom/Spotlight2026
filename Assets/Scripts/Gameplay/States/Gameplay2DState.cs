@@ -1,9 +1,11 @@
 using UnityEngine;
+using Spotlight.UI;
 
 namespace Spotlight.Gameplay.States
 {
     /// <summary>
-    /// 2D 子玩法状态（占位）。具体的 2D 玩法逻辑（待定）后续在此接入。
+    /// 2D 子玩法状态。进入时隐藏常驻 HUD（2D 玩法不显示 HUD）。
+    /// 具体的 2D 玩法逻辑（待定）后续在此接入。
     /// </summary>
     public sealed class Gameplay2DState : IGameplayState
     {
@@ -12,6 +14,7 @@ namespace Spotlight.Gameplay.States
         public void OnEnter()
         {
             Debug.Log("[Gameplay] 进入 2D 玩法");
+            HudPanel.HideHud();
             // TODO: 初始化 / 激活 2D 玩法相关逻辑。
         }
 
