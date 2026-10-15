@@ -1,10 +1,11 @@
 using UnityEngine;
 using Spotlight.UI;
+using Spotlight.World2D5;
 
 namespace Spotlight.Gameplay.States
 {
     /// <summary>
-    /// 3D 玩法状态。进入时显示常驻 HUD，退出时隐藏（2D 玩法不显示 HUD）。
+    /// 3D 玩法状态。进入时显示常驻 HUD 并初始化 2.5D 世界，退出时隐藏 HUD。
     /// 实际的 3D 玩法逻辑（人物移动、交互、NPC 等）后续在此接入。
     /// </summary>
     public sealed class Gameplay3DState : IGameplayState
@@ -15,6 +16,7 @@ namespace Spotlight.Gameplay.States
         {
             Debug.Log("[Gameplay] 进入 3D 玩法");
             HudPanel.ShowHud();
+            World2D5Bootstrap.Initialize();
             // TODO: 初始化 / 激活 3D 玩法相关逻辑。
         }
 
@@ -31,3 +33,4 @@ namespace Spotlight.Gameplay.States
         }
     }
 }
+

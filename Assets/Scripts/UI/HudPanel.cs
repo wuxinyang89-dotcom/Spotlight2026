@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,14 +8,31 @@ namespace Spotlight.UI
     /// 常驻 HUD 面板（Normal 层）：包含
     /// 1) 左上角任务列表（点击打开任务日志）；
     /// 2) 右下角背包图标（点击打开背包详情）；
-    /// 3) 中下方技能圆环（四个彩色光球均匀分布，点击查看技能详情）。
+    /// 3) 左下角技能圆环（光球数量按拥有能力球数量动态设置，点击查看技能详情）。
     /// 各"打开详情"目前均为空壳，具体界面后续实现。
     /// </summary>
     public sealed class HudPanel : UIPanel
     {
         public override UILayer Layer => UILayer.Normal;
 
+        private const float RingDiameter = 160f;
+        private const float OrbSize = 44f;
+        private const float RingMargin = 24f;
+
         private static HudPanel _instance;
+
+        private RectTransform _ringRect;
+        private readonly List<GameObject> _orbObjects = new List<GameObject>();
+
+        private static readonly Color[] OrbPalette = new Color[]
+        {
+            new Color(1f, 0.35f, 0.35f),
+            new Color(0.4f, 0.85f, 0.4f),
+            new Color(0.35f, 0.55f, 1f),
+            new Color(1f, 0.85f, 0.3f),
+            new Color(0.75f, 0.45f, 1f),
+            new Color(0.35f, 0.9f, 0.85f),
+        };
 
         /// <summary>显示常驻 HUD（首次调用时自动创建）。</summary>
         public static void ShowHud()
@@ -29,6 +47,15 @@ namespace Spotlight.UI
             if (_instance != null)
             {
                 _instance.Hide();
+            }
+        }
+
+        /// <summary>根据拥有能力球数量刷新技能圆环上的光球（供道具系统调用）。</summary>
+        public static void SetOrbCount(int count)
+        {
+            if (_instance != null)
+            {
+                _instance.RefreshOrbs(count);
             }
         }
 
@@ -90,43 +117,59 @@ namespace Spotlight.UI
             bRect.sizeDelta = new Vector2(96f, 96f);
         }
 
-        // ---------- 3. 技能圆环 ----------
+        // ---------- 3. 技能圆环（左下角） ----------
 
         private void BuildSkillRing()
         {
-            const float ringDiameter = 280f;
-            const float orbRadius = 132f;
-            const float orbSize = 64f;
-
             Color ringColor = new Color(0.4f, 0.45f, 0.55f, 0.9f);
-            Color[] orbColors = new Color[]
-            {
-                new Color(1f, 0.35f, 0.35f),
-                new Color(0.4f, 0.85f, 0.4f),
-                new Color(0.35f, 0.55f, 1f),
-                new Color(1f, 0.85f, 0.3f),
-            };
 
-            // 圆环（预留 Sprite）
             Image ring = UIFactory.CreateImage("SkillRing", transform, Color.white);
             ring.sprite = UIFactory.CreateRingSprite(ringColor);
             ring.raycastTarget = false;
-            RectTransform ringRect = ring.rectTransform;
-            ringRect.anchorMin = new Vector2(0.5f, 0f);
-            ringRect.anchorMax = new Vector2(0.5f, 0f);
-            ringRect.pivot = new Vector2(0.5f, 0.5f);
-            ringRect.anchoredPosition = new Vector2(0f, 220f);
-            ringRect.sizeDelta = new Vector2(ringDiameter, ringDiameter);
+            _ringRect = ring.rectTransform;
+            _ringRect.anchorMin = new Vector2(0f, 0f);
+            _ringRect.anchorMax = new Vector2(0f, 0f);
+            _ringRect.pivot = new Vector2(0.5f, 0.5f);
+            _ringRect.anchoredPosition = new Vector2(RingDiameter * 0.5f + RingMargin, RingDiameter * 0.5f + RingMargin);
+            _ringRect.sizeDelta = new Vector2(RingDiameter, RingDiameter);
 
-            // 四个彩色光球均匀分布（对角 45°/135°/225°/315°），点击打开技能详情
-            for (int i = 0; i < orbColors.Length; i++)
+            // 占位：默认 4 个能力球，后续由道具系统调用 SetOrbCount 驱动
+            RefreshOrbs(4);
+        }
+
+        /// <summary>按数量重建圆环上的光球（均匀分布；0 或负数表示清空）。</summary>
+        private void RefreshOrbs(int count)
+        {
+            if (_ringRect == null)
             {
-                float angle = (45f + i * 90f) * Mathf.Deg2Rad;
+                return;
+            }
+
+            foreach (GameObject orb in _orbObjects)
+            {
+                if (orb != null)
+                {
+                    Destroy(orb);
+                }
+            }
+            _orbObjects.Clear();
+
+            if (count <= 0)
+            {
+                return;
+            }
+
+            float orbRadius = RingDiameter * 0.5f - OrbSize * 0.5f + 4f;
+            float angleStep = 360f / count;
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = i * angleStep * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 
-                Button orb = UIFactory.CreateButton("SkillOrb", ring.transform, string.Empty, 16);
+                Button orb = UIFactory.CreateButton("SkillOrb", _ringRect, string.Empty, 16);
                 Image orbImage = orb.GetComponent<Image>();
-                orbImage.sprite = UIFactory.CreateCircleSprite(orbColors[i]);
+                orbImage.sprite = UIFactory.CreateCircleSprite(OrbPalette[i % OrbPalette.Length]);
                 orbImage.color = Color.white;
                 orb.onClick.AddListener(SkillDetailPanel.Open);
 
@@ -135,7 +178,9 @@ namespace Spotlight.UI
                 orbRect.anchorMax = new Vector2(0.5f, 0.5f);
                 orbRect.pivot = new Vector2(0.5f, 0.5f);
                 orbRect.anchoredPosition = dir * orbRadius;
-                orbRect.sizeDelta = new Vector2(orbSize, orbSize);
+                orbRect.sizeDelta = new Vector2(OrbSize, OrbSize);
+
+                _orbObjects.Add(orb.gameObject);
             }
         }
     }

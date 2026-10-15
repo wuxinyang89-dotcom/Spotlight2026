@@ -1,15 +1,38 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Spotlight.Data.Dialogue
 {
     /// <summary>
-    /// 对话数据档（占位骨架）。
-    /// 数据档字段尚未确定，请勿在此填入具体字段；待策划/需求明确后再补充。
-    /// 该资产用于承载单个对话的内容，后续由触发交互的对象（NPC、可交互道具）引用。
+    /// 对话数据档：一段对话由若干条台词按顺序组成。
+    /// 每条台词包含说话人与台词文本；由交互物（NPC、道具）引用后，通过对话面板逐条播放。
     /// </summary>
     [CreateAssetMenu(fileName = "Dialogue", menuName = "Spotlight/Data/Dialogue", order = 0)]
     public sealed class DialogueAsset : ScriptableObject
     {
-        // TODO: 对话数据档字段待定，确定后在此补充。
+        [Header("台词（按播放顺序）")]
+        [SerializeField] private List<DialogueLine> lines = new List<DialogueLine>();
+
+        /// <summary>台词列表（按播放顺序）。</summary>
+        public IReadOnlyList<DialogueLine> Lines => lines;
+
+        /// <summary>追加一条台词（编辑器或代码创建对话时使用）。</summary>
+        public void AddLine(string speaker, string text)
+        {
+            lines.Add(new DialogueLine { speaker = speaker, text = text });
+        }
+    }
+
+    /// <summary>一条台词：说话人与台词文本。</summary>
+    [Serializable]
+    public sealed class DialogueLine
+    {
+        /// <summary>说话人名称。</summary>
+        public string speaker;
+
+        /// <summary>台词文本。</summary>
+        public string text;
     }
 }
+
