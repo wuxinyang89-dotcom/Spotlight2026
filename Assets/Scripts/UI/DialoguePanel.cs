@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -21,13 +22,14 @@ namespace Spotlight.UI
         private RectTransform _panelRect;
 
         private DialogueAsset _dialogue;
+        private Func<string, Vector2> _speakerResolver;
         private int _lineIndex;
 
-        /// <summary>开始播放一段对话。</summary>
-        public static void Play(DialogueAsset dialogue)
+        /// <summary>开始播放一段对话（可传入"说话者名字 → 屏幕位置"解析器用于位置映射）。</summary>
+        public static void Play(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null)
         {
             EnsureInstance();
-            _instance.StartDialogue(dialogue);
+            _instance.StartDialogue(dialogue, speakerScreenPositionResolver);
         }
 
         /// <summary>关闭当前对话。</summary>
@@ -36,15 +38,6 @@ namespace Spotlight.UI
             if (_instance != null)
             {
                 _instance.Hide();
-            }
-        }
-
-        /// <summary>设置说话者屏幕位置（归一化 0..1），用于映射弹窗位置。人物位置后补时调用。</summary>
-        public static void SetSpeakerPosition(Vector2 screenPosition01)
-        {
-            if (_instance != null)
-            {
-                _instance.ApplySpeakerPosition(screenPosition01);
             }
         }
 
@@ -66,9 +59,10 @@ namespace Spotlight.UI
             BuildUI();
         }
 
-        private void StartDialogue(DialogueAsset dialogue)
+        private void StartDialogue(DialogueAsset dialogue, Func<string, Vector2> speakerResolver)
         {
             _dialogue = dialogue;
+            _speakerResolver = speakerResolver;
             _lineIndex = 0;
 
             if (_dialogue == null || _dialogue.Lines.Count == 0)
@@ -96,6 +90,13 @@ namespace Spotlight.UI
             if (_lineText != null)
             {
                 _lineText.text = line.text ?? string.Empty;
+            }
+
+            // 位置映射：按当前说话者解析屏幕位置（支持多说话者 / 旁观对话）
+            if (_speakerResolver != null)
+            {
+                Vector2 speakerPos = _speakerResolver(line.speaker);
+                ApplySpeakerPosition(speakerPos);
             }
         }
 

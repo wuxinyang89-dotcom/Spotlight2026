@@ -6,7 +6,8 @@ namespace Spotlight.Data.Dialogue
 {
     /// <summary>
     /// 对话数据档：一段对话由若干条台词按顺序组成。
-    /// 每条台词包含说话人与台词文本；由交互物（NPC、道具）引用后，通过对话面板逐条播放。
+    /// 说话者可为任意角色（NPC 或玩家），对话可能不含玩家（例如旁观 / 偷听 NPC 间聊天）。
+    /// 由交互物（NPC、道具）引用后，通过对话面板逐条播放；每句台词按说话者位置做映射。
     /// </summary>
     [CreateAssetMenu(fileName = "Dialogue", menuName = "Spotlight/Data/Dialogue", order = 0)]
     public sealed class DialogueAsset : ScriptableObject
@@ -28,7 +29,7 @@ namespace Spotlight.Data.Dialogue
     [Serializable]
     public sealed class DialogueLine
     {
-        /// <summary>说话人名称。</summary>
+        /// <summary>说话者标识（任意角色名，NPC 或玩家；旁观对话中可不含玩家）。</summary>
         public string speaker;
 
         /// <summary>台词文本。</summary>

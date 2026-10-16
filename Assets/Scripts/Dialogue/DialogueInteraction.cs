@@ -9,18 +9,18 @@ namespace Spotlight.Dialogue
 {
     /// <summary>
     /// 对话交互：NPC 被交互时播放其关联的对话（通过对话面板逐条显示）。
-    /// 实现 <see cref="INPCInteraction"/>，作为 NPC 的交互行为注入。
-    /// 可携带"说话者屏幕位置提供者"，用于把对话弹窗位置映射到说话者位置。
+    /// 实现 <see cref="INPCInteraction"/>。可携带"说话者名字 → 屏幕位置"解析器，
+    /// 支持多说话者位置映射（含旁观 NPC 间对话）。
     /// </summary>
     public sealed class DialogueInteraction : INPCInteraction
     {
         private readonly DialogueAsset _dialogue;
-        private readonly Func<Vector2> _speakerScreenPositionProvider;
+        private readonly Func<string, Vector2> _speakerScreenPositionResolver;
 
-        public DialogueInteraction(DialogueAsset dialogue, Func<Vector2> speakerScreenPositionProvider = null)
+        public DialogueInteraction(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null)
         {
             _dialogue = dialogue;
-            _speakerScreenPositionProvider = speakerScreenPositionProvider;
+            _speakerScreenPositionResolver = speakerScreenPositionResolver;
         }
 
         public void OnInteract(ICharacter character)
@@ -30,13 +30,9 @@ namespace Spotlight.Dialogue
                 return;
             }
 
-            if (_speakerScreenPositionProvider != null)
-            {
-                DialoguePanel.SetSpeakerPosition(_speakerScreenPositionProvider());
-            }
-
-            DialoguePanel.Play(_dialogue);
+            DialoguePanel.Play(_dialogue, _speakerScreenPositionResolver);
         }
     }
 }
+
 
