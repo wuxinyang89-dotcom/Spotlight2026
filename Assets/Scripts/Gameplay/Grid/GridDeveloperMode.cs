@@ -18,7 +18,9 @@ namespace Spotlight.Gameplay.Grid
             Erase,
             Player,
             Wall,
-            Interactable
+            Interactable,
+            Pit,
+            Endpoint
         }
 
         private static readonly Rect PanelRect = new Rect(10f, 10f, 300f, 460f);
@@ -100,7 +102,7 @@ namespace Spotlight.Gameplay.Grid
 
             GUILayout.Space(6);
             GUILayout.Label("画笔（左键涂 / 右键擦除）");
-            _brush = (Brush)GUILayout.Toolbar((int)_brush, new[] { "擦除", "人物", "墙", "可交互" });
+            _brush = (Brush)GUILayout.Toolbar((int)_brush, new[] { "擦除", "出生点", "墙", "可交互", "深坑", "终点" });
 
             GUILayout.Space(6);
             GUILayout.Label("尺寸（修改后点“重建”）");
@@ -139,7 +141,7 @@ namespace Spotlight.Gameplay.Grid
                 GUILayout.Label("· 左键点击：用当前画笔涂格子");
                 GUILayout.Label("· 右键点击：擦除格子");
                 GUILayout.Label("· 左键拖动：平移相机");
-                GUILayout.Label("· 人物格全局唯一，放新人物会替换旧位置");
+                GUILayout.Label("· 出生点（人物格）全局唯一，放新出生点会替换旧位置");
                 GUILayout.Label("· 导出后可在 Project 窗口编辑该资产");
             }
 
@@ -167,6 +169,12 @@ namespace Spotlight.Gameplay.Grid
                     break;
                 case Brush.Interactable:
                     _grid.SetCellType(x, y, GridCellType.Interactable);
+                    break;
+                case Brush.Pit:
+                    _grid.SetCellType(x, y, GridCellType.Pit);
+                    break;
+                case Brush.Endpoint:
+                    _grid.SetCellType(x, y, GridCellType.Endpoint);
                     break;
             }
         }

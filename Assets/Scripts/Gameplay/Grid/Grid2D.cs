@@ -20,6 +20,8 @@ namespace Spotlight.Gameplay.Grid
         [SerializeField] private GameObject playerBlockPrefab;
         [SerializeField] private GameObject wallBlockPrefab;
         [SerializeField] private GameObject interactableBlockPrefab;
+        [SerializeField] private GameObject pitBlockPrefab;
+        [SerializeField] private GameObject endpointBlockPrefab;
 
         [Header("初始布局资产（可选，运行时会自动应用）")]
         [SerializeField] private GridLayoutAsset layoutAsset;
@@ -220,6 +222,7 @@ namespace Spotlight.Gameplay.Grid
 
             block.name = $"{type}_{cell.X}_{cell.Y}";
             block.transform.position = cell.WorldPosition;
+            AttachPhysics(block, cell, type);
             return block;
         }
 
@@ -230,6 +233,8 @@ namespace Spotlight.Gameplay.Grid
                 case GridCellType.Player: return playerBlockPrefab;
                 case GridCellType.Wall: return wallBlockPrefab;
                 case GridCellType.Interactable: return interactableBlockPrefab;
+                case GridCellType.Pit: return pitBlockPrefab;
+                case GridCellType.Endpoint: return endpointBlockPrefab;
                 default: return null;
             }
         }
@@ -255,8 +260,133 @@ namespace Spotlight.Gameplay.Grid
                 case GridCellType.Player: return new Color(0.2f, 0.85f, 0.4f);
                 case GridCellType.Wall: return new Color(0.25f, 0.26f, 0.3f);
                 case GridCellType.Interactable: return new Color(1f, 0.75f, 0.2f);
+                case GridCellType.Pit: return new Color(0.1f, 0.05f, 0.12f);
+                case GridCellType.Endpoint: return new Color(1f, 0.85f, 0.3f);
                 default: return Color.white;
             }
+        }
+
+        // ---------- 物理 / 触发器 ----------
+
+        /// <summary>
+        /// 为方块附加物理组件：
+        /// 墙=静态碰撞；可交互=动态刚体（受能力影响）；深坑 / 终点=触发器区域。
+        /// 碰撞体尺寸按单位（1×1）精灵设置，随方块缩放匹配视觉。
+        /// </summary>
+        private void AttachPhysics(GameObject block, GridCell cell, GridCellType type)
+        {
+            switch (type)
+            {
+                case GridCellType.Wall:
+                {
+                    BoxCollider2D col = block.GetComponent<BoxCollider2D>();
+                    if (col == null)
+                    {
+                        col = block.AddComponent<BoxCollider2D>();
+                    }
+                    col.isTrigger = false;
+                    col.size = Vector2.one;
+                    break;
+                }
+
+                case GridCellType.Interactable:
+                {
+                    Rigidbody2D body = block.GetComponent<Rigidbody2D>();
+                    if (body == null)
+                    {
+                        body = block.AddComponent<Rigidbody2D>();
+                    }
+                    body.bodyType = RigidbodyType2D.Dynamic;
+
+                    BoxCollider2D col = block.GetComponent<BoxCollider2D>();
+                    if (col == null)
+                    {
+                        col = block.AddComponent<BoxCollider2D>();
+                    }
+                    col.isTrigger = false;
+                    col.size = Vector2.one;
+
+                    if (block.GetComponent<GridInteractable>() == null)
+                    {
+                        block.AddComponent<GridInteractable>();
+                    }
+                    break;
+                }
+
+                case GridCellType.Pit:
+                case GridCellType.Endpoint:
+                {
+                    BoxCollider2D col = block.GetComponent<BoxCollider2D>();
+                    if (col == null)
+                    {
+                        col = block.AddComponent<BoxCollider2D>();
+                    }
+                    col.isTrigger = true;
+                    col.size = Vector2.one;
+
+                    GridCellZone zone = block.GetComponent<GridCellZone>();
+                    if (zone == null)
+                    {
+                        zone = block.AddComponent<GridCellZone>();
+                    }
+                    zone.Setup(type, cell.X, cell.Y);
+                    break;
+                }
+            }
+        }
+
+        // ---------- 查询 ----------
+
+        /// <summary>获取玩家出生点（Player 格）的世界位置；无出生点返回 false。</summary>
+        public bool TryGetSpawnPosition(out Vector3 worldPosition)
+        {
+            foreach (Vector2Int p in _playerCells)
+            {
+                GridCell cell = GetCell(p.x, p.y);
+                if (cell != null)
+                {
+                    worldPosition = cell.WorldPosition;
+                    return true;
+                }
+            }
+
+            worldPosition = transform.position;
+            return false;
+        }
+
+        /// <summary>在指定位置附近查找最近的可交互物体（超出 maxDistance 返回 null）。</summary>
+        public GridInteractable FindNearestInteractable(Vector3 worldPosition, float maxDistance)
+        {
+            GridInteractable best = null;
+            float bestSqr = maxDistance * maxDistance;
+
+            if (_cells == null)
+            {
+                return null;
+            }
+
+            foreach (GridCell cell in _cells)
+            {
+                if (cell == null || cell.Type != GridCellType.Interactable || cell.View == null)
+                {
+                    continue;
+                }
+
+                GridInteractable interactable = cell.View.GetComponent<GridInteractable>();
+                if (interactable == null)
+                {
+                    continue;
+                }
+
+                float sqr = ((Vector2)interactable.transform.position - (Vector2)worldPosition).sqrMagnitude;
+                if (sqr <= bestSqr)
+                {
+                    bestSqr = sqr;
+                    best = interactable;
+                }
+            }
+
+            return best;
         }
 
         private void CreateGround()

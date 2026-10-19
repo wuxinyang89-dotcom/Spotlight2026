@@ -100,6 +100,8 @@ namespace Spotlight.Gameplay.EditorTools
             layout.SetCell(5, 3, GridCellType.Wall);
             layout.SetCell(3, 5, GridCellType.Wall);
             layout.SetCell(6, 6, GridCellType.Interactable);
+            layout.SetCell(6, 4, GridCellType.Pit);
+            layout.SetCell(7, 7, GridCellType.Endpoint);
             AssetDatabase.CreateAsset(layout, layoutPath);
 
             LevelAsset level = ScriptableObject.CreateInstance<LevelAsset>();
@@ -122,6 +124,89 @@ namespace Spotlight.Gameplay.EditorTools
 
             Selection.activeObject = level;
             Debug.Log($"[Spotlight] 默认关卡已创建：{levelPath}");
+        }
+
+        [MenuItem("Tools/Spotlight/创建教学关（四步通关）")]
+        public static void CreateTutorialLevel()
+        {
+            const string folder = "Assets/Levels";
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                AssetDatabase.CreateFolder("Assets", "Levels");
+            }
+
+            string layoutPath = folder + "/TutorialLevelLayout.asset";
+            string levelPath = folder + "/TutorialLevel.asset";
+
+            GridLayoutAsset layout = AssetDatabase.LoadAssetAtPath<GridLayoutAsset>(layoutPath);
+            if (layout == null)
+            {
+                layout = ScriptableObject.CreateInstance<GridLayoutAsset>();
+                AssetDatabase.CreateAsset(layout, layoutPath);
+            }
+
+            layout.width = 3;
+            layout.height = 14;
+            layout.cellSize = 1f;
+            layout.Clear();
+
+            // 侧墙：左 X=0、右 X=2 整列封死，形成 X=1 的单列走廊。
+            for (int y = 0; y < layout.height; y++)
+            {
+                layout.SetCell(0, y, GridCellType.Wall);
+                layout.SetCell(2, y, GridCellType.Wall);
+            }
+
+            // 出生点。
+            layout.SetCell(1, 0, GridCellType.Player);
+
+            // 第 1 步：单排深坑（Levity 悬浮越过）。
+            layout.SetCell(1, 2, GridCellType.Pit);
+
+            // 第 2 步：一排障碍墙（Levity 减重 + Isolation 推开）。
+            layout.SetCell(1, 4, GridCellType.Interactable);
+
+            // 第 3 步：两排障碍墙（Melancholy 致脆 + Fervor 打碎）。
+            layout.SetCell(1, 6, GridCellType.Interactable);
+            layout.SetCell(1, 7, GridCellType.Interactable);
+
+            // 第 4 步：借力弹板 + 多排深坑（Isolation 借力 + Levity 悬浮）。
+            layout.SetCell(1, 9, GridCellType.Interactable);
+            layout.SetCell(1, 10, GridCellType.Pit);
+            layout.SetCell(1, 11, GridCellType.Pit);
+            layout.SetCell(1, 12, GridCellType.Pit);
+
+            // 终点。
+            layout.SetCell(1, 13, GridCellType.Endpoint);
+
+            EditorUtility.SetDirty(layout);
+
+            LevelAsset level = AssetDatabase.LoadAssetAtPath<LevelAsset>(levelPath);
+            if (level == null)
+            {
+                level = ScriptableObject.CreateInstance<LevelAsset>();
+                AssetDatabase.CreateAsset(level, levelPath);
+            }
+
+            level.levelName = "TutorialLevel";
+            level.layout = layout;
+            EditorUtility.SetDirty(level);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            // 尝试设为默认关卡，便于直接游玩。
+            GameplayBootstrap bootstrap = Object.FindFirstObjectByType<GameplayBootstrap>();
+            if (bootstrap != null)
+            {
+                SerializedObject so = new SerializedObject(bootstrap);
+                so.FindProperty("defaultLevel").objectReferenceValue = level;
+                so.ApplyModifiedProperties();
+                EditorUtility.SetDirty(bootstrap);
+            }
+
+            Selection.activeObject = level;
+            Debug.Log($"[Spotlight] 教学关已创建：{levelPath}");
         }
 
         private static void EnsureBuildSettings()

@@ -1,18 +1,49 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using Spotlight.Gameplay.Abilities;
+using Spotlight.Gameplay.Save;
+using Spotlight.UI;
 
 namespace Spotlight.Gameplay.Grid
 {
     /// <summary>
-    /// 2D 人物键盘四向行走：WASD / 方向键控制，按格移动，撞墙（Wall）停止。
-    /// 由 <see cref="GridGameMode"/> 在“运行态”启用，编辑态自动禁用。
+    /// 能力世界玩家控制器：在运行态驱动“独立、平滑移动”的玩家实体。
+    /// - 在出生点（Player 格）生成玩家，WASD / 方向键平滑移动（Rigidbody2D，非按格）；
+    /// - 数字键 1~4 对最近的可交互物体施加对应能力；
+    /// - 进入深坑重置到出生点，进入终点通关；
+    /// - 自动存档（位置 + 已拥有能力）。
     /// </summary>
     public sealed class GridPlayerController : MonoBehaviour
     {
+        [Header("网格")]
         [SerializeField] private Grid2D grid;
-        [SerializeField, Min(0.01f)] private float moveInterval = 0.15f;
 
-        private float _lastMoveTime = float.NegativeInfinity;
+        [Header("移动速度")]
+        [SerializeField, Min(0.01f)] private float moveSpeed = 4f;
+
+        [Header("技能库（数据档，可选；留空使用内置默认）")]
+        [SerializeField] private SkillDatabase skillDatabase;
+
+        [Header("能力键（数字 1~4 对应 Levity / Melancholy / Fervor / Isolation）")]
+        [SerializeField] private Key abilityKey1 = Key.Digit1;
+        [SerializeField] private Key abilityKey2 = Key.Digit2;
+        [SerializeField] private Key abilityKey3 = Key.Digit3;
+        [SerializeField] private Key abilityKey4 = Key.Digit4;
+
+        [Header("能力作用半径")]
+        [SerializeField, Min(0.1f)] private float abilityRadius = 2.5f;
+
+        [Header("自动存档间隔（秒）")]
+        [SerializeField, Min(0.5f)] private float autoSaveInterval = 5f;
+
+        private GridPlayerAvatar _avatar;
+        private Vector3 _spawnPosition;
+        private bool _completed;
+        private float _saveTimer;
+        private float _lastPitResetTime = float.NegativeInfinity;
 
         private void Start()
         {
@@ -20,57 +51,267 @@ namespace Spotlight.Gameplay.Grid
             {
                 grid = GetComponent<Grid2D>();
             }
+
+            AbilitySystem.Instance.Register(skillDatabase);
+            StartCoroutine(InitRoutine());
+        }
+
+        private void OnDisable()
+        {
+            if (_avatar != null)
+            {
+                _avatar.SetMoveInput(Vector2.zero);
+                if (_avatar.Body != null)
+                {
+                    _avatar.Body.linearVelocity = Vector2.zero;
+                }
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            SaveProgress();
+        }
+
+        private IEnumerator InitRoutine()
+        {
+            // 等待一帧，确保同帧内的 LevelLoader.Start 已完成关卡加载。
+            yield return null;
+
+            _spawnPosition = grid != null && grid.TryGetSpawnPosition(out Vector3 spawn)
+                ? spawn
+                : transform.position;
+
+            SpawnAvatar();
+            LoadProgress();
         }
 
         private void Update()
         {
-            if (grid == null || Keyboard.current == null)
+            if (_avatar == null || _completed)
             {
                 return;
             }
 
-            Keyboard kb = Keyboard.current;
+            _avatar.SetMoveInput(ReadMoveInput());
+            HandleAbilities();
+            AutoSaveTick();
+        }
 
-            Vector2Int dir = Vector2Int.zero;
-            bool justPressed = false;
+        // ---------- 生成 / 存档 ----------
 
-            // 优先级：刚按下的键 > 持续按住的键；四向取其一。
-            if (kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame) { dir = Vector2Int.up; justPressed = true; }
-            else if (kb.sKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame) { dir = Vector2Int.down; justPressed = true; }
-            else if (kb.aKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) { dir = Vector2Int.left; justPressed = true; }
-            else if (kb.dKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) { dir = Vector2Int.right; justPressed = true; }
-            else if (kb.wKey.isPressed || kb.upArrowKey.isPressed) dir = Vector2Int.up;
-            else if (kb.sKey.isPressed || kb.downArrowKey.isPressed) dir = Vector2Int.down;
-            else if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) dir = Vector2Int.left;
-            else if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) dir = Vector2Int.right;
+        private void SpawnAvatar()
+        {
+            GameObject go = new GameObject("GridPlayer");
+            go.transform.position = _spawnPosition;
 
-            if (dir == Vector2Int.zero)
+            _avatar = go.AddComponent<GridPlayerAvatar>();
+            _avatar.MoveSpeed = moveSpeed;
+            _avatar.ZoneEntered += OnZoneEntered;
+        }
+
+        private void SaveProgress()
+        {
+            if (_avatar == null)
             {
                 return;
             }
 
-            // 刚按下立即移动；持续按住则按间隔连续移动。
-            if (!justPressed && Time.time - _lastMoveTime < moveInterval)
+            AutoSaveSystem.SaveData data = new AutoSaveSystem.SaveData
             {
+                levelName = SceneManager.GetActiveScene().name,
+                playerX = _avatar.WorldPosition.x,
+                playerY = _avatar.WorldPosition.y,
+                ownedAbilities = new List<int>(),
+                levelCompleted = _completed
+            };
+
+            foreach (AbilityType ability in AbilitySystem.Instance.Owned)
+            {
+                data.ownedAbilities.Add((int)ability);
+            }
+
+            AutoSaveSystem.Save(data);
+        }
+
+        private void LoadProgress()
+        {
+            AutoSaveSystem.SaveData data = AutoSaveSystem.Load();
+
+            // 仅当存档属于当前关卡时恢复；否则授予初始四种能力。
+            if (data == null || data.levelName != SceneManager.GetActiveScene().name)
+            {
+                GrantInitialAbilities();
                 return;
             }
 
-            if (TryStep(dir))
+            if (_avatar != null)
             {
-                _lastMoveTime = Time.time;
+                Vector3 pos = _avatar.transform.position;
+                _avatar.transform.position = new Vector3(data.playerX, data.playerY, pos.z);
+            }
+
+            if (data.ownedAbilities != null && data.ownedAbilities.Count > 0)
+            {
+                AbilitySystem.Instance.ClearAbilities();
+                foreach (int ability in data.ownedAbilities)
+                {
+                    AbilitySystem.Instance.Grant((AbilityType)ability);
+                }
+            }
+            else
+            {
+                GrantInitialAbilities();
             }
         }
 
-        private bool TryStep(Vector2Int direction)
+        private void GrantInitialAbilities()
         {
-            if (grid.PlayerCells == null || grid.PlayerCells.Count == 0)
+            AbilitySystem.Instance.ClearAbilities();
+            AbilitySystem.Instance.Grant(AbilityType.Levity);
+            AbilitySystem.Instance.Grant(AbilityType.Melancholy);
+            AbilitySystem.Instance.Grant(AbilityType.Fervor);
+            AbilitySystem.Instance.Grant(AbilityType.Isolation);
+        }
+
+        private void AutoSaveTick()
+        {
+            _saveTimer += Time.deltaTime;
+            if (_saveTimer >= autoSaveInterval)
             {
-                return false;
+                _saveTimer = 0f;
+                SaveProgress();
+            }
+        }
+
+        // ---------- 能力 ----------
+
+        private void HandleAbilities()
+        {
+            Keyboard kb = Keyboard.current;
+            if (kb == null)
+            {
+                return;
             }
 
-            Vector2Int from = grid.PlayerCells[0];
-            Vector2Int to = from + direction;
-            return grid.TryMovePlayer(from.x, from.y, to.x, to.y);
+            if (kb[abilityKey1].wasPressedThisFrame) UseAbility(AbilityType.Levity);
+            if (kb[abilityKey2].wasPressedThisFrame) UseAbility(AbilityType.Melancholy);
+            if (kb[abilityKey3].wasPressedThisFrame) UseAbility(AbilityType.Fervor);
+            if (kb[abilityKey4].wasPressedThisFrame) UseAbility(AbilityType.Isolation);
+        }
+
+        private void UseAbility(AbilityType type)
+        {
+            if (!AbilitySystem.Instance.Has(type))
+            {
+                return;
+            }
+
+            AbilityDefinition def = AbilitySystem.Instance.GetDefinition(type);
+            GridInteractable target = grid != null
+                ? grid.FindNearestInteractable(_avatar.WorldPosition, abilityRadius)
+                : null;
+
+            switch (type)
+            {
+                case AbilityType.Levity:
+                    // 自身悬浮（越过深坑）。
+                    if (def != null && def.levitateDuration > 0f)
+                    {
+                        _avatar.StartLevitate(def.levitateDuration);
+                    }
+                    // 同时对附近物体减重。
+                    if (target != null)
+                    {
+                        AbilitySystem.Instance.Apply(type, target, _avatar.WorldPosition);
+                    }
+                    break;
+
+                case AbilityType.Isolation:
+                    // 物体推力；并对施放者借力反冲（借反作用力获得动能）。
+                    if (target != null)
+                    {
+                        AbilitySystem.Instance.Apply(type, target, _avatar.WorldPosition);
+                        if (_avatar.Body != null && def != null && def.selfImpulseForce > 0f)
+                        {
+                            _avatar.Body.AddForce(_avatar.Facing * def.selfImpulseForce, ForceMode2D.Impulse);
+                        }
+                    }
+                    break;
+
+                default:
+                    // Melancholy / Fervor 等：作用于附近物体。
+                    if (target != null)
+                    {
+                        AbilitySystem.Instance.Apply(type, target, _avatar.WorldPosition);
+                    }
+                    break;
+            }
+
+            if (target == null)
+            {
+                Debug.Log($"[Ability] {type}：附近没有可交互物体。");
+            }
+            else
+            {
+                Debug.Log($"[Ability] 对 {target.name} 施加 {type}。");
+            }
+
+            SaveProgress(); // 使用能力后自动存档
+        }
+
+        // ---------- 区域 / 输入 ----------
+
+        private void OnZoneEntered(GridCellZone zone)
+        {
+            switch (zone.Type)
+            {
+                case GridCellType.Pit:
+                    if (_avatar != null && _avatar.IsLevitating)
+                    {
+                        return; // 悬浮中，不会掉落。
+                    }
+                    if (Time.time - _lastPitResetTime < 0.5f)
+                    {
+                        return; // 防止 OnTriggerStay 连续触发导致反复重置。
+                    }
+                    _lastPitResetTime = Time.time;
+                    _avatar.transform.position = _spawnPosition;
+                    if (_avatar.Body != null)
+                    {
+                        _avatar.Body.linearVelocity = Vector2.zero;
+                    }
+                    Debug.Log("[Ability] 掉入深坑，已重置到出生点。");
+                    break;
+
+                case GridCellType.Endpoint:
+                    if (_completed)
+                    {
+                        return;
+                    }
+                    _completed = true;
+                    _avatar.SetMoveInput(Vector2.zero);
+                    SaveProgress();
+                    PopupDialog.Show("通关", "已抵达终点，关卡完成！");
+                    Debug.Log("[Ability] 抵达终点，通关！");
+                    break;
+            }
+        }
+
+        private static Vector2 ReadMoveInput()
+        {
+            if (Keyboard.current == null)
+            {
+                return Vector2.zero;
+            }
+
+            Keyboard kb = Keyboard.current;
+            Vector2 input = Vector2.zero;
+            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) input.x -= 1f;
+            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) input.x += 1f;
+            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) input.y -= 1f;
+            if (kb.wKey.isPressed || kb.upArrowKey.isPressed) input.y += 1f;
+            return input;
         }
     }
 }
