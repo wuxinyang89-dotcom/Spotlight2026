@@ -2,22 +2,28 @@ using System;
 using UnityEngine;
 using Spotlight.Character;
 using Spotlight.Data.Dialogue;
+using Spotlight.Data.Inventory;
 using Spotlight.Dialogue;
+using Spotlight.Gameplay;
 using Spotlight.Interaction;
 using Spotlight.Movement;
 using Spotlight.NPC;
-using NPCEntity = Spotlight.NPC.NPC;
+using Spotlight.NPC.Appearance;
 using Spotlight.NPC.Attributes;
+using NPCEntity = Spotlight.NPC.NPC;
 using Spotlight.UI;
 
 namespace Spotlight.World2D5
 {
     /// <summary>
-    /// 2.5D 世界引导：创建世界（正交相机）、玩家人物与示例 NPC（含对话），
-    /// 用于演示主逻辑、人物逻辑、按 F 交互与对话人物映射。由 3D 玩法状态进入时调用。
+    /// 2.5D 世界引导：创建世界（正交相机）、玩家与序章 NPC（开学典礼剧情）。
+    /// 由 3D 玩法状态进入时调用。剧情（对话数据档）与 NPC 外观（种族外观数据档）均为数据驱动；
+    /// 无数据档时用代码占位回退，保证可运行。
     /// </summary>
     public static class World2D5Bootstrap
     {
+        private const string PrologueDialoguePath = "Dialogue/Prologue"; // Resources 下的对话数据档
+
         private static World2D5 _world;
 
         public static void Initialize()
@@ -29,7 +35,7 @@ namespace Spotlight.World2D5
 
             CreateWorld();
             CreatePlayer();
-            CreateDemoNpcs();
+            CreatePrologue();
         }
 
         private static void CreateWorld()
@@ -50,58 +56,138 @@ namespace Spotlight.World2D5
             Rigidbody2D body = go.AddComponent<Rigidbody2D>();
 
             Rigidbody2DMovementController movement = new Rigidbody2DMovementController(body);
-            PlayerCharacter character = new PlayerCharacter("玩家", movement, new BasicInteractor());
+            PlayerCharacter character = new PlayerCharacter("主角", movement, new BasicInteractor());
 
             CharacterView view = go.AddComponent<CharacterView>();
             view.Initialize(character, null); // 动画实现后补
+
+            _world.SetFollowTarget(go.transform);
         }
 
-        private static void CreateDemoNpcs()
+        private static void CreatePrologue()
         {
-            // NPC A：守卫（对话发起者，可交互）
-            GameObject goA = new GameObject("GuardNPC");
-            goA.transform.position = new Vector3(2f, 0f, 0f);
-            SpriteRenderer srA = goA.AddComponent<SpriteRenderer>();
-            srA.sprite = UIFactory.CreateCircleSprite(new Color(1f, 0.6f, 0.3f), 64);
-            srA.sortingOrder = 1;
-            NPCView viewA = goA.AddComponent<NPCView>();
+            // 序章 NPC：招生办老师（可交互，给出传译器）+ 旁观的外星学生。
+            GameObject teacherGo = new GameObject("AdmissionsTeacher");
+            teacherGo.transform.position = new Vector3(2f, 0f, 0f);
+            NPCView teacherView = teacherGo.AddComponent<NPCView>();
 
-            // NPC B：村民（对话参与者，暂不可交互）
-            GameObject goB = new GameObject("VillagerNPC");
-            goB.transform.position = new Vector3(2f, 1.2f, 0f);
-            SpriteRenderer srB = goB.AddComponent<SpriteRenderer>();
-            srB.sprite = UIFactory.CreateCircleSprite(new Color(0.6f, 1f, 0.4f), 64);
-            srB.sortingOrder = 1;
-            NPCView viewB = goB.AddComponent<NPCView>();
+            GameObject studentGo = new GameObject("AlienStudent");
+            studentGo.transform.position = new Vector3(2f, 1.4f, 0f);
+            NPCView studentView = studentGo.AddComponent<NPCView>();
 
-            // 对话：NPC 间聊天（玩家旁观，说话者不含玩家）
-            DialogueAsset dialogue = ScriptableObject.CreateInstance<DialogueAsset>();
-            dialogue.AddLine("守卫", "今天天气不错。");
-            dialogue.AddLine("村民", "是啊，适合赶集。");
-            dialogue.AddLine("守卫", "听说北边有神秘信号。");
-            dialogue.AddLine("村民", "我也听说了。");
+            // 种族外化外貌：老师=精灵、学生=人类，肤色 / 部件来自种族外观数据档。
+            NPCAppearanceAsset teacherAppearance = Resources.Load<NPCAppearanceAsset>("NPCAppearances/Elf");
+            NPCAppearanceAsset studentAppearance = Resources.Load<NPCAppearanceAsset>("NPCAppearances/Human");
+            if (teacherAppearance == null)
+            {
+                teacherAppearance = CreateFallbackAppearance(new Color(0.7f, 0.9f, 0.85f));
+            }
+            if (studentAppearance == null)
+            {
+                studentAppearance = CreateFallbackAppearance(new Color(0.95f, 0.85f, 0.75f));
+            }
 
-            // 说话者位置解析器：任意说话者 → 屏幕位置（不要求含玩家）
+            // 对话数据档优先，无则代码占位。
+            DialogueAsset dialogue = Resources.Load<DialogueAsset>(PrologueDialoguePath);
+            if (dialogue == null)
+            {
+                dialogue = CreateFallbackDialogue();
+            }
+
             Func<string, Vector2> resolver = speaker =>
             {
-                if (speaker == "守卫")
+                if (speaker == "招生办老师")
                 {
-                    return viewA.ScreenPosition01;
+                    return teacherView.ScreenPosition01;
                 }
 
-                if (speaker == "村民")
+                if (speaker == "外星学生")
                 {
-                    return viewB.ScreenPosition01;
+                    return studentView.ScreenPosition01;
                 }
 
                 return new Vector2(0.5f, 0.5f);
             };
 
-            DialogueInteraction interaction = new DialogueInteraction(dialogue, resolver);
+            ItemDefinition translator = LoadTranslator();
 
-            viewA.Initialize(new NPCEntity("守卫", new NPCAttributeSet(), interaction));
-            viewB.Initialize(new NPCEntity("村民", new NPCAttributeSet()));
+            DialogueInteraction interaction = new DialogueInteraction(dialogue, resolver, () => GrantItemAndOfferResonance(translator));
+
+            teacherView.Initialize(new NPCEntity(
+                "招生办老师",
+                new NPCAttributeSet(new RaceAttribute("Elf", "精灵", teacherAppearance)),
+                interaction));
+
+            studentView.Initialize(new NPCEntity(
+                "外星学生",
+                new NPCAttributeSet(new RaceAttribute("Human", "人类", studentAppearance))));
+        }
+
+        private static NPCAppearanceAsset CreateFallbackAppearance(Color skinColor)
+        {
+            NPCAppearanceAsset app = ScriptableObject.CreateInstance<NPCAppearanceAsset>();
+            app.skinColor = skinColor;
+            return app;
+        }
+
+        private static DialogueAsset CreateFallbackDialogue()
+        {
+            DialogueAsset dialogue = ScriptableObject.CreateInstance<DialogueAsset>();
+            dialogue.AddLine("招生办老师", "（叽里咕噜……）");
+            dialogue.AddLine("招生办老师", "……（发现你听不懂，递来一个发光的装置）");
+            dialogue.AddLine("招生办老师", "（佩戴传译器后）欢迎来到星辉学院，新同学。");
+            dialogue.AddLine("主角", "……这是哪里？");
+            return dialogue;
+        }
+
+        private static ItemDefinition LoadTranslator()
+        {
+            ItemDatabase database = Resources.Load<ItemDatabase>("Items/ItemDatabase");
+            return database != null ? database.Find("Translator") : CreateFallbackTranslator();
+        }
+
+        private static ItemDefinition CreateFallbackTranslator()
+        {
+            // 无数据档时的占位道具（数据驱动回退）。
+            return new ItemDefinition
+            {
+                id = "Translator",
+                displayName = "传译器",
+                description = "招生办老师给你的翻译装置，能听懂异星语言。",
+                iconColor = new Color(0.5f, 0.9f, 1f)
+            };
+        }
+
+        private static void GrantItem(ItemDefinition item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if (Inventory.Instance.Add(item))
+            {
+                ItemAcquiredPanel.Show(item);
+            }
+        }
+
+        private static void GrantItemAndOfferResonance(ItemDefinition item)
+        {
+            GrantItem(item);
+
+            // 主线选项：共鸣 → 进入能力世界；暂缓 → 继续探索。
+            ChoicePanel.Show(
+                "招生办老师邀请你进入能力世界，是否共鸣？",
+                new[] { "共鸣", "暂缓" },
+                index =>
+                {
+                    if (index == 0 && GameplayBootstrap.Instance != null)
+                    {
+                        GameplayBootstrap.Instance.SwitchTo(GameplayMode.Mode2D);
+                    }
+                });
         }
     }
 }
+
 

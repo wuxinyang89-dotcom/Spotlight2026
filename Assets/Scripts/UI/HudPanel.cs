@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Spotlight.Gameplay.Abilities;
+using Spotlight.Data.Quest;
 
 namespace Spotlight.UI
 {
@@ -23,6 +25,7 @@ namespace Spotlight.UI
 
         private RectTransform _ringRect;
         private readonly List<GameObject> _orbObjects = new List<GameObject>();
+        private Text _taskText;
 
         private static readonly Color[] OrbPalette = new Color[]
         {
@@ -50,12 +53,12 @@ namespace Spotlight.UI
             }
         }
 
-        /// <summary>根据拥有能力球数量刷新技能圆环上的光球（供道具系统调用）。</summary>
-        public static void SetOrbCount(int count)
+        /// <summary>根据已拥有能力刷新技能圆环光球。</summary>
+        public static void RefreshSkillRing()
         {
             if (_instance != null)
             {
-                _instance.RefreshOrbs(count);
+                _instance.RefreshOrbs();
             }
         }
 
@@ -79,6 +82,20 @@ namespace Spotlight.UI
             BuildSkillRing();
         }
 
+        protected override void OnShow()
+        {
+            RefreshOrbs();
+            RefreshTask();
+        }
+
+        private void RefreshTask()
+        {
+            if (_taskText != null)
+            {
+                _taskText.text = QuestSystem.Instance.CurrentObjective ?? "暂无任务";
+            }
+        }
+
         // ---------- 1. 左上角任务列表 ----------
 
         private void BuildTaskList()
@@ -92,9 +109,10 @@ namespace Spotlight.UI
             tRect.anchoredPosition = new Vector2(24f, -24f);
             tRect.sizeDelta = new Vector2(200f, 32f);
 
-            // 占位任务条目（可点击打开任务日志）
-            Button taskButton = UIFactory.CreateButton("TaskItem", transform, "示例任务：调查神秘信号", 18);
+            // 任务条目（可点击打开任务日志；文本由 QuestSystem 驱动）
+            Button taskButton = UIFactory.CreateButton("TaskItem", transform, "", 18);
             taskButton.onClick.AddListener(TaskLogPanel.Open);
+            _taskText = taskButton.GetComponentInChildren<Text>();
             RectTransform bRect = taskButton.GetComponent<RectTransform>();
             bRect.anchorMin = new Vector2(0f, 1f);
             bRect.anchorMax = new Vector2(0f, 1f);
@@ -133,12 +151,11 @@ namespace Spotlight.UI
             _ringRect.anchoredPosition = new Vector2(RingDiameter * 0.5f + RingMargin, RingDiameter * 0.5f + RingMargin);
             _ringRect.sizeDelta = new Vector2(RingDiameter, RingDiameter);
 
-            // 占位：默认 4 个能力球，后续由道具系统调用 SetOrbCount 驱动
-            RefreshOrbs(4);
+            RefreshOrbs();
         }
 
-        /// <summary>按数量重建圆环上的光球（均匀分布；0 或负数表示清空）。</summary>
-        private void RefreshOrbs(int count)
+        /// <summary>按已拥有能力重建圆环光球（数量 / 颜色 / 图标来自能力数据档）。</summary>
+        private void RefreshOrbs()
         {
             if (_ringRect == null)
             {
@@ -154,22 +171,27 @@ namespace Spotlight.UI
             }
             _orbObjects.Clear();
 
-            if (count <= 0)
+            IReadOnlyList<AbilityType> owned = AbilitySystem.Instance.Owned;
+            if (owned == null || owned.Count == 0)
             {
                 return;
             }
 
             float orbRadius = RingDiameter * 0.5f - OrbSize * 0.5f + 4f;
-            float angleStep = 360f / count;
+            float angleStep = 360f / owned.Count;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < owned.Count; i++)
             {
+                AbilityDefinition def = AbilitySystem.Instance.GetDefinition(owned[i]);
+                Color color = def != null ? def.orbColor : OrbPalette[i % OrbPalette.Length];
+                Sprite icon = def != null ? def.icon : null;
+
                 float angle = i * angleStep * Mathf.Deg2Rad;
                 Vector2 dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
 
                 Button orb = UIFactory.CreateButton("SkillOrb", _ringRect, string.Empty, 16);
                 Image orbImage = orb.GetComponent<Image>();
-                orbImage.sprite = UIFactory.CreateCircleSprite(OrbPalette[i % OrbPalette.Length]);
+                orbImage.sprite = icon != null ? icon : UIFactory.CreateCircleSprite(color, 64);
                 orbImage.color = Color.white;
                 orb.onClick.AddListener(SkillDetailPanel.Open);
 

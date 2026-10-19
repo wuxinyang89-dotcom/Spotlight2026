@@ -16,21 +16,24 @@ namespace Spotlight.Dialogue
     {
         private readonly DialogueAsset _dialogue;
         private readonly Func<string, Vector2> _speakerScreenPositionResolver;
+        private readonly Action _onComplete;
 
-        public DialogueInteraction(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null)
+        public DialogueInteraction(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null, Action onComplete = null)
         {
             _dialogue = dialogue;
             _speakerScreenPositionResolver = speakerScreenPositionResolver;
+            _onComplete = onComplete;
         }
 
         public void OnInteract(ICharacter character)
         {
             if (_dialogue == null || _dialogue.Lines.Count == 0)
             {
+                _onComplete?.Invoke();
                 return;
             }
 
-            DialoguePanel.Play(_dialogue, _speakerScreenPositionResolver);
+            DialoguePanel.Play(_dialogue, _speakerScreenPositionResolver, _onComplete);
         }
     }
 }

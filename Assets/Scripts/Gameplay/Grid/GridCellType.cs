@@ -25,6 +25,9 @@ namespace Spotlight.Gameplay.Grid
         Pit = 4,
 
         /// <summary>终点（通关目标）。</summary>
-        Endpoint = 5
+        Endpoint = 5,
+
+        /// <summary>沉降机关（重物压下触发）。</summary>
+        Sink = 6
     }
 }

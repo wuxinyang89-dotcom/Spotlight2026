@@ -132,8 +132,8 @@ namespace Spotlight.World2D5
 
         private void OnTriggerExit2D(Collider2D other)
         {
-            NPCView view = other.GetComponent<NPCView>();
-            if (view != null && view.NPC != null && view.NPC == _currentInteractable)
+            IInteractable interactable = ResolveInteractable(other);
+            if (interactable != null && interactable == _currentInteractable)
             {
                 ClearInteractable();
             }
@@ -141,21 +141,26 @@ namespace Spotlight.World2D5
 
         private void TrySetInteractable(Collider2D other)
         {
-            NPCView view = other.GetComponent<NPCView>();
-            if (view == null || view.NPC == null)
-            {
-                return;
-            }
-
-            IInteractable interactable = view.NPC;
-            if (_currentInteractable == interactable)
+            IInteractable interactable = ResolveInteractable(other);
+            if (interactable == null || _currentInteractable == interactable)
             {
                 return;
             }
 
             _currentInteractable = interactable;
             _character?.SetInteractionTarget(interactable);
-            InteractPromptPanel.ShowPrompt("按 F 对话");
+            InteractPromptPanel.ShowPrompt($"按 F {interactable.InteractionName}");
+        }
+
+        private static IInteractable ResolveInteractable(Collider2D other)
+        {
+            NPCView npcView = other.GetComponent<NPCView>();
+            if (npcView != null && npcView.NPC != null)
+            {
+                return npcView.NPC;
+            }
+
+            return other.GetComponent<MonologueView>();
         }
 
         private void ClearInteractable()

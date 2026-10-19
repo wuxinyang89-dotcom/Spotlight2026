@@ -23,13 +23,14 @@ namespace Spotlight.UI
 
         private DialogueAsset _dialogue;
         private Func<string, Vector2> _speakerResolver;
+        private Action _onComplete;
         private int _lineIndex;
 
         /// <summary>开始播放一段对话（可传入"说话者名字 → 屏幕位置"解析器用于位置映射）。</summary>
-        public static void Play(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null)
+        public static void Play(DialogueAsset dialogue, Func<string, Vector2> speakerScreenPositionResolver = null, Action onComplete = null)
         {
             EnsureInstance();
-            _instance.StartDialogue(dialogue, speakerScreenPositionResolver);
+            _instance.StartDialogue(dialogue, speakerScreenPositionResolver, onComplete);
         }
 
         /// <summary>关闭当前对话。</summary>
@@ -59,14 +60,16 @@ namespace Spotlight.UI
             BuildUI();
         }
 
-        private void StartDialogue(DialogueAsset dialogue, Func<string, Vector2> speakerResolver)
+        private void StartDialogue(DialogueAsset dialogue, Func<string, Vector2> speakerResolver, Action onComplete)
         {
             _dialogue = dialogue;
             _speakerResolver = speakerResolver;
+            _onComplete = onComplete;
             _lineIndex = 0;
 
             if (_dialogue == null || _dialogue.Lines.Count == 0)
             {
+                _onComplete?.Invoke();
                 return;
             }
 
@@ -105,6 +108,8 @@ namespace Spotlight.UI
             if (_dialogue == null)
             {
                 Hide();
+                _onComplete?.Invoke();
+                _onComplete = null;
                 return;
             }
 
@@ -112,6 +117,8 @@ namespace Spotlight.UI
             if (_lineIndex >= _dialogue.Lines.Count)
             {
                 Hide();
+                _onComplete?.Invoke();
+                _onComplete = null;
                 return;
             }
 

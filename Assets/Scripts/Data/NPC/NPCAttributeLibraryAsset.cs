@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Spotlight.NPC.Appearance;
 using Spotlight.NPC.Attributes;
 
 namespace Spotlight.Data.NPC
@@ -24,7 +25,7 @@ namespace Spotlight.Data.NPC
         /// <summary>种族取值（转换为运行时属性，跳过空 Id 的条目）。</summary>
         public IReadOnlyList<RaceAttribute> GetRaces() =>
             races.Where(e => !string.IsNullOrEmpty(e.id))
-                 .Select(e => new RaceAttribute(e.id, e.displayName))
+                 .Select(e => new RaceAttribute(e.id, e.displayName, e.appearance))
                  .ToList();
 
         /// <summary>性格取值（转换为运行时属性，跳过空 Id 的条目）。</summary>
@@ -50,6 +51,9 @@ namespace Spotlight.Data.NPC
 
         /// <summary>显示名称（如 "人类"、"勇敢"）。</summary>
         public string displayName;
+
+        /// <summary>种族外观（仅种族使用；性格留空）。</summary>
+        public NPCAppearanceAsset appearance;
     }
 }
 

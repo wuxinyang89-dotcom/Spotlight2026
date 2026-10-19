@@ -21,7 +21,7 @@ namespace Spotlight.Gameplay.Grid
     /// </summary>
     public sealed class GridGameMode : MonoBehaviour
     {
-        [SerializeField] private GridPlayMode startMode = GridPlayMode.Edit;
+        [SerializeField] private GridPlayMode startMode = GridPlayMode.Run;
         [SerializeField] private bool allowEditMode = true;
         [SerializeField] private Key toggleKey = Key.Tab;
 
@@ -37,7 +37,7 @@ namespace Spotlight.Gameplay.Grid
             set => allowEditMode = value;
         }
 
-        private void Start()
+        private void Awake()
         {
             if (developerMode == null)
             {

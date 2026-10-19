@@ -77,6 +77,7 @@ description: Unity 项目《Spotlight2026》的项目专属 Skill，记录玩法
 | `Spotlight.Character` | `Scripts/Character/` | `ICharacter`、`ICharacterAnimator`、`PlayerCharacter` |
 | `Spotlight.NPC` | `Scripts/NPC/` | `NPC`、`INPCInteraction`、`INPCMovement` |
 | `Spotlight.NPC.Attributes` | `Scripts/NPC/Attributes/` | `INPCAttribute`、`NPCAttributeType`(Race/Personality)、`NPCAttributeSet`、`NPCAttributeCombinator`、`RaceAttribute`、`PersonalityAttribute` |
+| `Spotlight.NPC.Appearance` | `Scripts/NPC/Appearance/` | `NPCBodyPartType`、`NPCAppearanceAsset`（身体部件纸娃娃数据档）+ `NPCPartDefinition` |
 | `Spotlight.Interaction` | `Scripts/Interaction/` | `IInteractable`、`IInteractor`、`BasicInteractor` |
 | `Spotlight.Movement` | `Scripts/Movement/` | `IMovementController`、`Rigidbody2DMovementController`、`TransformMovementController` |
 | `Spotlight.Dialogue` | `Scripts/Dialogue/` | `DialogueInteraction` |
@@ -108,22 +109,28 @@ description: Unity 项目《Spotlight2026》的项目专属 Skill，记录玩法
 - ✅ 道具获取页面所需的物品数据挂载点（`ItemDatabase` 骨架）。
 - ✅ 2.5D 世界坐标 → 屏幕坐标映射（`World2D5`）。
 
-### 4.2 待添加（按优先级）
+### 4.2 实现进度（全部落地）
 
-| 优先级 | 内容 | 现状缺口 |
-|--------|------|----------|
-| P0 | **能力/技能数据模型 + 四种能力定义** | 无技能数据档；`HudPanel` 硬编码 4 球 + 调色板；`SkillDetailPanel` 空壳 |
-| P0 | **交互连招核心：物体/自身状态改变 + 物理效果**（质量/重量/加速度/推力） | 无状态改变系统；`GridCellType` 只有 Empty/Player/Wall/Interactable |
-| P0 | **关卡元素扩展**：深坑(Pit)、终点(Endpoint)、易碎(Fragile)、沉降机关(Sink) | `GridCellType` 缺失；`LevelAsset` 只有「含 Player」校验，无通关/胜利判定 |
-| P0 | **教学关四步通关逻辑 + 阶段刷新/存档** | 无运行时阶段存档/刷新（现有 JSON 序列化仅供关卡编辑） |
-| P1 | **开场静态漫画分镜 CG 系统** | 无 CG/分镜播放器与 CG 数据档 |
-| P1 | **道具获取弹窗**（图案+名称+简介） | `ItemDatabase` 空壳；无道具获取 UI；`PopupDialog` 为通用弹窗，需专门「道具获取」样式 |
-| P1 | **任务系统**（当前目标 + 任务日志） | `QuestDatabase` 空壳；`TaskLogPanel` 空壳；`HudPanel` 硬编码任务文案 |
-| P1 | **选项对话（共鸣/暂缓）** | 无选项 UI/逻辑 |
-| P1 | **2.5D 现实世界自由探索**（角色控制、摄像机跟随、地图>视口） | `Gameplay3DState` 桩（主世界已改 2.5D，需更名为 2.5D 状态或复用 `World2D5`）；`PlayerCharacter` 纯逻辑未接线到视图；无摄像机跟随 |
-| P2 | **环境/物品交互（独白/讲解）+ 旁听对话触发** | 只有 NPC 对话交互，无「物品/环境→独白」实现 |
-| P2 | **剧情状态机/流程编排**（CG→动画→探索→能力世界→尾声→主线推进） | 无剧情流程控制器；「共鸣」触发未接正式入口（现用调试键 M） |
-| P2 | **美术插槽落地** | 全部 UI 为程序化占位，无 Sprite 插槽；无美术资源目录 |
+| 优先级 | 需求模块 | 内容 | 实现 |
+|--------|----------|------|------|
+| P0 | 能力世界 | 教学关四步通关脚本化流程 | `TutorialLevelController` + `TutorialStage`（完成点检测 / 教程提示） |
+| P0 | 能力世界 | 教程对话框（屏幕中间） | `TutorialPanel` |
+| P0 | 能力世界 | 阶段刷新 | `TutorialLevelController.RefreshStage`（R 键回到阶段起点） |
+| P0 | 沉浸式 UI | 技能环数据化 + 技能详情页 | `HudPanel` 从 `AbilitySystem` 读取；`SkillDetailPanel` 列表 |
+| P1 | 剧情 | 静态漫画分镜 CG 系统 | `CGAsset` + `CGPlayer`（逐格播放 / 点击推进） |
+| P1 | 沉浸式 UI | 任务系统 | `QuestDefinition`/`QuestDatabase`/`QuestSystem` + `TaskLogPanel` + HUD 任务文本 |
+| P1 | 剧情 / 交互 | 选项对话（共鸣/暂缓）+ 共鸣正式入口 | `ChoicePanel`；招生办老师对话后共鸣 → Mode2D |
+| P1 | 2.5D 探索 | 摄像机跟随玩家 | `World2D5.SetFollowTarget` + LateUpdate 平滑跟随 |
+| P1 | 2.5D 探索 | 环境 / 物品交互（独白） | `MonologueView`（IInteractable）+ `CharacterView` 扩展 |
+| P2 | 剧情 | 剧情流程编排（开场 CG） | `StoryFlow.PlayIntro`（Gameplay3DState 进入时触发） |
+| P2 | 能力世界 | 沉降机关 Sink | `GridCellType.Sink` + `GridSink`（重物压下检测） |
+
+### 4.3 仅剩美术侧 / 后续剧情
+- **美术插槽落地**：Sprite 素材待填（CG 分镜图、道具/技能图标、NPC 身体部件、按钮样式）。
+- **主线推进 / 区域解锁**：机制已具备（`QuestSystem` + `SceneFlow`），需后续剧情内容编排。
+
+### 4.4 需求已明确「暂不加入」
+- 可拾取物品（自由探索阶段暂不加入）。
 
 ## 5. 设计规范（可维护性）
 
@@ -194,6 +201,7 @@ Assets/Art/
 - ⬜ 待续：阶段刷新、能力环 HUD 数据化、教程对话框、关卡胜利流程编排、`GridCellType` 的 `Sink`（沉降机关）等。
 
 ### 8.1 能力世界操作速查（当前实现）
+- 进入 2D 场景默认「运行态」（Run），玩家在出生点（Player 格）生成；编辑器内按 Tab 切换「编辑态」（涂格子）。
 - 移动：WASD / 方向键（平滑移动，撞墙碰撞停止）。
 - 能力：数字键 1=Levity（自身悬浮+物体减重）、2=Melancholy（物体增重/致脆）、3=Fervor（物体冲量/打碎）、4=Isolation（物体推力+借力反冲）。
 - 深坑：掉入自动重置到出生点（悬浮中不会掉落）；终点：抵达即通关（弹窗）。
@@ -205,3 +213,72 @@ Assets/Art/
 3. **Melancholy + Fervor** 打碎两排障碍墙（Melancholy 致脆、Fervor 打碎）。
 4. **Isolation + Levity** 借力弹射越过多排深坑（Isolation 借力反冲 + Levity 悬浮）。
 - 抵达终点通关。
+
+## 9. 2.5D 世界与 NPC 身体部件（纸娃娃）
+
+### 9.1 需求
+- 主世界为 2.5D（`SampleScene`，正交相机），现实世界剧情在此展开。
+- **带属性的 NPC，种族属性会外化在外貌上**：把 NPC 按身体部件分解（纸娃娃）。
+
+### 9.2 身体部件分解（渲染顺序从底到顶）
+| 部件 | 类型 | 说明 |
+|------|------|------|
+| Body | `NPCBodyPartType.Body` | 身体（仅 1 个部件，肤色外化） |
+| BackHair | `BackHair` | 后发 |
+| SideHair | `SideHair` | 侧发 / 辫子 |
+| Eyes | `Eyes` | 眼睛 |
+| Nose | `Nose` | 鼻子 |
+| Mouth | `Mouth` | 嘴巴 |
+| FrontHair | `FrontHair` | 前发（顶层） |
+
+- **肤色（skinColor）** 是颜色，外化在身体部件上（`NPCAppearanceAsset.skinColor`）。
+
+### 9.3 数据档与链路
+- `NPCAppearanceAsset`（SO）：肤色 + 各部件 `NPCPartDefinition { sprite, color }`；所有 Sprite 均为美术插槽，留空回退程序化占位。
+- `RaceAttribute.Appearance`：种族持有外观引用（外化链路：种族 → 外观 → 部件）。
+- `NPCAttributeLibraryAsset.NPCAttributeEntry.appearance`：种族条目关联外观数据档。
+- `NPCView`（`World2D5`）：按 `NPCAppearanceAsset.RenderOrder` 创建多层 SpriteRenderer 渲染部件；外观来源 = Inspector 指定 > `NPC.Race.Appearance` > 无（占位身体）。
+- 序章内容数据档（`Assets/Resources/`）：`Dialogue/Prologue.asset`（对话）、`NPCAppearances/Elf.asset`、`Human.asset`（外观），由 `World2D5Bootstrap` 加载（无则代码占位）。
+- Editor 菜单：`Tools/Spotlight/生成 2.5D 序章数据档（外观 + 对话）`（`NPCContentSetup`）。
+
+### 9.4 美术插槽（待美术填充）
+- 每个部件（身体/前发/后发/侧发/眼睛/鼻子/嘴巴）一个 `Sprite` 插槽 + `Color`；身体部件用肤色着色。
+- 建议目录：`Assets/Art/Sprites/NPC/`（按部件命名，如 `body`、`front_hair`、`eyes`…）。
+
+## 10. 道具与背包系统（已实现）
+
+### 10.1 数据档与运行时
+- `ItemDefinition`（Serializable）：道具定义（id / 名称 / 简介 / 图标 Sprite 插槽 / 占位颜色）。
+- `ItemDatabase`（SO）：道具库，`Find(id)` / `AddItem(item)` / `Items`。
+- `Inventory`（运行时单例）：已拥有道具列表，`Add(item)` / `Has(id)` / `Owned` / `Count`。
+
+### 10.2 UI
+- `ItemAcquiredPanel`（Popup）：道具获取弹窗（图标 + 名称 + 简介 + 确认）。
+- `InventoryPanel`（Popup）：背包详情（列表：图标 + 名称 + 简介；空背包提示）。
+- `HudPanel` 右下角背包图标已接入 `InventoryPanel.Open`。
+
+### 10.3 数据档与集成
+- `Assets/Resources/Items/ItemDatabase.asset`（传译器道具）。
+- `World2D5Bootstrap`：招生办老师对话结束后（`DialoguePanel.Play` 新增 `onComplete` 回调）触发 `Inventory.Add` + `ItemAcquiredPanel.Show`。
+- Editor 菜单 `Tools/Spotlight/生成 2.5D 序章数据档（外观 + 对话）` 同时生成 ItemDatabase。
+
+### 10.4 美术插槽
+- 道具图标 `ItemDefinition.icon`（Sprite 插槽，留空回退 `iconColor` 占位色块）。
+
+## 11. 主界面 / 暂停界面 / 场景流程（已实现）
+
+### 11.1 场景流程
+- `SceneFlow`（`Spotlight.Gameplay`）：`StartNewGame`（清存档进游戏）、`ContinueGame`（读存档进对应场景）、`GoToMainMenu`（清理常驻 GameplayBootstrap 后回主菜单）、`Quit`。
+- 场景链路：`MainMenu`（主菜单，启动场景）→ `SampleScene`（游戏 / 2.5D 主世界）→ `Gameplay2D`（能力世界）。
+
+### 11.2 UI
+- `MainMenuPanel`（Normal 层）：开始游戏 / 继续游戏（无存档时禁用）/ 退出游戏。
+- `PausePanel`（Top 层）：查看背包 / 回到主菜单 / 继续游戏；显示时 `Time.timeScale = 0`，关闭恢复 1。
+- 暂停触发：`GameplayBootstrap.Update` 监听 Esc（`escapeKey`）；暂停中忽略其他输入。
+
+### 11.3 场景生成与 Build Settings
+- Editor 菜单 `Tools/Spotlight/生成主菜单场景（MainMenu）`（`GameplaySceneSetup.CreateMainMenuScene`）。
+- Build Settings 顺序：`MainMenu`(0) → `SampleScene` → `Gameplay2D`。
+
+### 11.4 美术插槽
+- 主界面 / 暂停界面按钮为程序化占位（`UIFactory.CreateButton`），美术侧可替换按钮 `Image`/`Sprite` 与整体布局。

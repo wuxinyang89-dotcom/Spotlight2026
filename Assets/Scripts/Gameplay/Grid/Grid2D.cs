@@ -22,6 +22,7 @@ namespace Spotlight.Gameplay.Grid
         [SerializeField] private GameObject interactableBlockPrefab;
         [SerializeField] private GameObject pitBlockPrefab;
         [SerializeField] private GameObject endpointBlockPrefab;
+        [SerializeField] private GameObject sinkBlockPrefab;
 
         [Header("初始布局资产（可选，运行时会自动应用）")]
         [SerializeField] private GridLayoutAsset layoutAsset;
@@ -235,6 +236,7 @@ namespace Spotlight.Gameplay.Grid
                 case GridCellType.Interactable: return interactableBlockPrefab;
                 case GridCellType.Pit: return pitBlockPrefab;
                 case GridCellType.Endpoint: return endpointBlockPrefab;
+                case GridCellType.Sink: return sinkBlockPrefab;
                 default: return null;
             }
         }
@@ -262,6 +264,7 @@ namespace Spotlight.Gameplay.Grid
                 case GridCellType.Interactable: return new Color(1f, 0.75f, 0.2f);
                 case GridCellType.Pit: return new Color(0.1f, 0.05f, 0.12f);
                 case GridCellType.Endpoint: return new Color(1f, 0.85f, 0.3f);
+                case GridCellType.Sink: return new Color(0.4f, 0.3f, 0.2f);
                 default: return Color.white;
             }
         }
@@ -332,6 +335,23 @@ namespace Spotlight.Gameplay.Grid
                     zone.Setup(type, cell.X, cell.Y);
                     break;
                 }
+
+                case GridCellType.Sink:
+                {
+                    BoxCollider2D col = block.GetComponent<BoxCollider2D>();
+                    if (col == null)
+                    {
+                        col = block.AddComponent<BoxCollider2D>();
+                    }
+                    col.isTrigger = true;
+                    col.size = Vector2.one;
+
+                    if (block.GetComponent<GridSink>() == null)
+                    {
+                        block.AddComponent<GridSink>();
+                    }
+                    break;
+                }
             }
         }
 
@@ -387,6 +407,23 @@ namespace Spotlight.Gameplay.Grid
             }
 
             return best;
+        }
+
+        /// <summary>世界坐标 → 格子坐标（越界返回 false）。</summary>
+        public bool TryGetCellAtWorld(Vector3 worldPosition, out int x, out int y)
+        {
+            Vector3 local = transform.InverseTransformPoint(worldPosition);
+            x = Mathf.FloorToInt(local.x / cellSize + 0.5f);
+            y = Mathf.FloorToInt(local.y / cellSize + 0.5f);
+
+            if (IsInBounds(x, y))
+            {
+                return true;
+            }
+
+            x = -1;
+            y = -1;
+            return false;
         }
 
         private void CreateGround()

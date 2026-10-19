@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Spotlight.Gameplay.Grid;
 using Spotlight.Gameplay.States;
+using Spotlight.UI;
 
 namespace Spotlight.Gameplay
 {
@@ -70,6 +71,18 @@ namespace Spotlight.Gameplay
         private void Update()
         {
             _manager.Tick(Time.deltaTime);
+
+            // 暂停：按 Esc 打开 / 关闭暂停界面。
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                PausePanel.Toggle();
+                return;
+            }
+
+            if (PausePanel.IsOpen)
+            {
+                return; // 暂停中：忽略其他输入。
+            }
 
             // 临时调试：按 debugToggleKey 在 3D / 2D 之间切换（后续换成正式触发方式）。
             if (Keyboard.current != null && Keyboard.current[debugToggleKey].wasPressedThisFrame)

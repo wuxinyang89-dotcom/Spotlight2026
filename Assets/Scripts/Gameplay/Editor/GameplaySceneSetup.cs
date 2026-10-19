@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Spotlight.Gameplay;
 using Spotlight.Gameplay.Grid;
+using Spotlight.UI;
 
 namespace Spotlight.Gameplay.EditorTools
 {
@@ -17,6 +18,7 @@ namespace Spotlight.Gameplay.EditorTools
     {
         private const string ScenePath = "Assets/Scenes/Gameplay2D.unity";
         private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
+        private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
 
         [MenuItem("Tools/Spotlight/生成 2D 场景（Gameplay2D）")]
         public static void Create2DScene()
@@ -209,20 +211,57 @@ namespace Spotlight.Gameplay.EditorTools
             Debug.Log($"[Spotlight] 教学关已创建：{levelPath}");
         }
 
+        [MenuItem("Tools/Spotlight/生成主菜单场景（MainMenu）")]
+        public static void CreateMainMenuScene()
+        {
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // 正交相机（主界面背景）
+            GameObject cameraGo = new GameObject("Main Camera");
+            Camera cam = cameraGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 5f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.1f, 0.1f, 0.12f);
+            cam.transform.position = new Vector3(0f, 0f, -10f);
+            cam.tag = "MainCamera";
+
+            // 主界面（showOnStart 自动显示）
+            GameObject menuGo = new GameObject("MainMenu");
+            MainMenuPanel panel = menuGo.AddComponent<MainMenuPanel>();
+            SerializedObject so = new SerializedObject(panel);
+            so.FindProperty("showOnStart").boolValue = true;
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.SaveScene(scene, MainMenuScenePath);
+            EnsureBuildSettings();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[Spotlight] 主菜单场景已生成：{MainMenuScenePath}");
+        }
+
         private static void EnsureBuildSettings()
         {
             List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
 
-            void AddIfMissing(string path)
+            void AddIfMissing(string path, int index = -1)
             {
                 if (scenes.Any(s => s.path == path))
                 {
                     return;
                 }
 
-                scenes.Add(new EditorBuildSettingsScene(path, true));
+                EditorBuildSettingsScene scene = new EditorBuildSettingsScene(path, true);
+                if (index >= 0 && index <= scenes.Count)
+                {
+                    scenes.Insert(index, scene);
+                }
+                else
+                {
+                    scenes.Add(scene);
+                }
             }
 
+            AddIfMissing(MainMenuScenePath, 0); // 主菜单作为启动场景
             AddIfMissing(SampleScenePath);
             AddIfMissing(ScenePath);
             EditorBuildSettings.scenes = scenes.ToArray();

@@ -13,6 +13,10 @@ namespace Spotlight.World2D5
         [SerializeField] private Camera worldCamera;
         [SerializeField] private float orthographicSize = 5f;
 
+        [Header("跟随")]
+        [SerializeField] private Transform followTarget;
+        [SerializeField] private float followSmooth = 6f;
+
         private static World2D5 _instance;
 
         /// <summary>全局实例（未创建时为 null）。</summary>
@@ -50,6 +54,21 @@ namespace Spotlight.World2D5
             worldCamera.orthographicSize = orthographicSize;
             worldCamera.transform.rotation = Quaternion.identity;
             worldCamera.transform.position = new Vector3(0f, 0f, -10f);
+        }
+
+        /// <summary>设置相机跟随目标（玩家）。</summary>
+        public void SetFollowTarget(Transform target) => followTarget = target;
+
+        private void LateUpdate()
+        {
+            if (followTarget == null || worldCamera == null)
+            {
+                return;
+            }
+
+            Vector3 target = followTarget.position;
+            target.z = worldCamera.transform.position.z;
+            worldCamera.transform.position = Vector3.Lerp(worldCamera.transform.position, target, followSmooth * Time.deltaTime);
         }
 
         /// <summary>世界坐标 → 屏幕归一化坐标（0..1）。</summary>

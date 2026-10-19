@@ -84,6 +84,12 @@ namespace Spotlight.Gameplay.Grid
 
             SpawnAvatar();
             LoadProgress();
+
+            // 自举教学关流程（运行态）。
+            if (GetComponent<TutorialLevelController>() == null)
+            {
+                gameObject.AddComponent<TutorialLevelController>();
+            }
         }
 
         private void Update()
@@ -108,6 +114,27 @@ namespace Spotlight.Gameplay.Grid
             _avatar = go.AddComponent<GridPlayerAvatar>();
             _avatar.MoveSpeed = moveSpeed;
             _avatar.ZoneEntered += OnZoneEntered;
+        }
+
+        /// <summary>玩家是否已生成。</summary>
+        public bool IsAvatarReady => _avatar != null;
+
+        /// <summary>玩家当前位置（未生成时为自身位置）。</summary>
+        public Vector3 AvatarPosition => _avatar != null ? _avatar.WorldPosition : transform.position;
+
+        /// <summary>传送玩家到指定世界位置（阶段刷新 / 重置用）。</summary>
+        public void TeleportTo(Vector3 worldPosition)
+        {
+            if (_avatar == null)
+            {
+                return;
+            }
+
+            _avatar.transform.position = worldPosition;
+            if (_avatar.Body != null)
+            {
+                _avatar.Body.linearVelocity = Vector2.zero;
+            }
         }
 
         private void SaveProgress()

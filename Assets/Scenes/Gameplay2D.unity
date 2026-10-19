@@ -269,7 +269,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fe61f5b37dd50c48b3c1655166dec16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spotlight.Gameplay.Grid.GridGameMode
-  startMode: 0
+  startMode: 1
   allowEditMode: 1
   toggleKey: 3
   developerMode: {fileID: 436957470}

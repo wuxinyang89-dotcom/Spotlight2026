@@ -20,7 +20,8 @@ namespace Spotlight.Gameplay.Grid
             Wall,
             Interactable,
             Pit,
-            Endpoint
+            Endpoint,
+            Sink
         }
 
         private static readonly Rect PanelRect = new Rect(10f, 10f, 300f, 460f);
@@ -102,7 +103,7 @@ namespace Spotlight.Gameplay.Grid
 
             GUILayout.Space(6);
             GUILayout.Label("画笔（左键涂 / 右键擦除）");
-            _brush = (Brush)GUILayout.Toolbar((int)_brush, new[] { "擦除", "出生点", "墙", "可交互", "深坑", "终点" });
+            _brush = (Brush)GUILayout.Toolbar((int)_brush, new[] { "擦除", "出生点", "墙", "可交互", "深坑", "终点", "机关" });
 
             GUILayout.Space(6);
             GUILayout.Label("尺寸（修改后点“重建”）");
@@ -175,6 +176,9 @@ namespace Spotlight.Gameplay.Grid
                     break;
                 case Brush.Endpoint:
                     _grid.SetCellType(x, y, GridCellType.Endpoint);
+                    break;
+                case Brush.Sink:
+                    _grid.SetCellType(x, y, GridCellType.Sink);
                     break;
             }
         }

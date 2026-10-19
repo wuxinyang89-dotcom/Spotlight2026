@@ -1,4 +1,5 @@
 using UnityEngine;
+using Spotlight.Gameplay;
 using Spotlight.UI;
 using Spotlight.World2D5;
 
@@ -17,7 +18,7 @@ namespace Spotlight.Gameplay.States
             Debug.Log("[Gameplay] 进入 3D 玩法");
             HudPanel.ShowHud();
             World2D5Bootstrap.Initialize();
-            // TODO: 初始化 / 激活 3D 玩法相关逻辑。
+            StoryFlow.PlayIntro(); // 开场 CG（无数据档则直接跳过）
         }
 
         public void OnExit()

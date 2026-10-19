@@ -33,6 +33,20 @@ namespace Spotlight.NPC.Attributes
             }
         }
 
+        /// <summary>以若干属性初始化（如 new NPCAttributeSet(race, personality)）。</summary>
+        public NPCAttributeSet(params INPCAttribute[] attributes)
+        {
+            if (attributes == null)
+            {
+                return;
+            }
+
+            foreach (INPCAttribute attribute in attributes)
+            {
+                Add(attribute);
+            }
+        }
+
         /// <summary>添加（或覆盖同类型）属性。</summary>
         public void Add(INPCAttribute attribute)
         {
